@@ -5,6 +5,10 @@ import MANAGED_PATHS from './managed-paths';
 import SUPPORTED_LANGUAGES from './supported-languages';
 import {SemvarValidator} from './validation-utils';
 
+interface DockerImageConfig {
+  repository: string;
+}
+
 export default class ServiceConfig {
   static _require(path: string) {
     return require(path);
@@ -40,7 +44,8 @@ export default class ServiceConfig {
       .setDependencies(configJSON.dependencies)
       .setProto(configJSON.proto)
       .setMainFile(configJSON.main)
-      .setLanguage(configJSON.language);
+      .setLanguage(configJSON.language)
+      .setImage(configJSON.image);
   }
 
   static convertServiceNameToFolderName(service_name: string): string {
@@ -57,6 +62,7 @@ export default class ServiceConfig {
   proto?: string;
   main: string;
   language: SUPPORTED_LANGUAGES;
+  image?: DockerImageConfig;
 
   constructor() {
     this.name = '';
@@ -69,6 +75,7 @@ export default class ServiceConfig {
     this.proto = undefined;
     this.main = 'index.js';
     this.language = SUPPORTED_LANGUAGES.NODE;
+    this.image = undefined;
   }
 
   getNormalizedName() {
@@ -134,6 +141,11 @@ export default class ServiceConfig {
 
   setLanguage(language: SUPPORTED_LANGUAGES) {
     this.language = language;
+    return this;
+  }
+
+  setImage(image_config: DockerImageConfig) {
+    this.image = image_config;
     return this;
   }
 

@@ -72,7 +72,16 @@ export default class Build extends Command {
     this.log(_info(`Building docker image for ${service_config.name}`));
     const dockerfile_path = path.join(__dirname, '../../Dockerfile');
     await Install.run(['--prefix', service_path]);
-    const tag_name = flags.tag || `architect-${service_config.name}`;
+
+    let tag_name = `architect-${service_config.name}`;
+    if (flags.tag) {
+      tag_name = flags.tag;
+    } else if (service_config.image) {
+      tag_name = service_config.image.repository;
+    }
+
+    const launcher_path = path.join(__dirname, `../../node_modules/architect-${service_config.language}-launcher`);
+
     execSync(`docker build --build-arg SERVICE_LANGUAGE=${service_config.language} -t ${tag_name} -f ${dockerfile_path} ${service_path}`);
     this.log(_success(`Successfully built image for ${service_config.name}`));
   }
