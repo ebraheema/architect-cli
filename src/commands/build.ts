@@ -80,8 +80,6 @@ export default class Build extends Command {
       tag_name = service_config.image.repository;
     }
 
-    const launcher_path = path.join(__dirname, `../../node_modules/architect-${service_config.language}-launcher`);
-
     execSync(`docker build --build-arg SERVICE_LANGUAGE=${service_config.language} -t ${tag_name} -f ${dockerfile_path} ${service_path}`);
     this.log(_success(`Successfully built image for ${service_config.name}`));
   }
