@@ -6,9 +6,6 @@ jobs:
       - image: architectio/architect-cli-base:latest
     steps:
       - checkout
-      - run:
-          name: Install Docker
-          command: curl -sSL https://get.docker.com/ | sh
       - setup_remote_docker
       - run:
           name: clone submodules
@@ -16,6 +13,10 @@ jobs:
       - run:
           name: npm install
           command: rm -rf node_modules && npm install --unsafe-perm=true && npm link . && npm install --unsafe-perm=true
+      - run:
+          name: test docker
+          command: |
+            docker run -v /root/project/test/calculator-example/addition-service:/defs -v /tmp:/opt/protoc --user $(id -u):$(id -g) architectio/protoc-all -f /opt/protoc/addition_service/service.proto -i /opt/protoc -l node -o architect_services
       - run:
           name: run tests
           command: npm test
