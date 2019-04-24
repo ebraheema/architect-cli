@@ -16,6 +16,7 @@ jobs:
       - run:
           name: test docker
           command: |
+            mkdir -p /opt/protoc/addition_service
             docker run -v /root/project/test/calculator-example/addition-service:/defs -v /tmp:/opt/protoc --user $(id -u):$(id -g) architectio/protoc-all -f /opt/protoc/addition_service/service.proto -i /opt/protoc -l node -o architect_services
       - run:
           name: run tests
