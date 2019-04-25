@@ -14,8 +14,9 @@ jobs:
           command: |
             curl -sL https://deb.nodesource.com/setup_11.x | sudo -E bash -
             sudo apt-get install -y nodejs
+            sudo rm /usr/bin/node
+            sudo ln -sf /usr/bin/nodejs /usr/bin/node
             ls -l /usr/bin/node*
-            node -v
       - run:
           name: update python version
           command: |
