@@ -37,7 +37,8 @@ jobs:
             source ~/.profile
             python3 --version
             python3 -m pip --version
-            python3 -m pip freeze --user
+            python3 -m pip freeze
+            ls -l /opt/circleci/.pyenv/versions/3.5.2/lib/python3.5/site-packages/
       - run:
           name: npm test
           command: |
