@@ -33,5 +33,6 @@ jobs:
           name: npm test
           command: |
             source ~/.profile
+            npm rebuild
             docker -v
             npm test
