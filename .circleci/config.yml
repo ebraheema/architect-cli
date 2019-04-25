@@ -2,8 +2,8 @@ version: 2
 
 jobs:
   build:
-    docker:
-      - image: architectio/architect-cli-base:latest
+    machine:
+      docker_layer_caching: true
     steps:
       - checkout
       - setup_remote_docker
