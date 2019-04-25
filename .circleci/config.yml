@@ -33,6 +33,13 @@ jobs:
             npm install --unsafe-perm=true
             npm rebuild
       - run:
+          name: python test
+          command: |
+            source ~/.profile
+            python3 --version
+            python3 -m pip --version
+            python3 -m pip freeze
+      - run:
           name: npm test
           command: |
             source ~/.profile
