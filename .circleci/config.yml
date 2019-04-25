@@ -28,11 +28,14 @@ jobs:
             python3 -m pip install --upgrade pip
       - run:
           name: npm install
-          command: npm link . && npm install --unsafe-perm=true
+          command: |
+            npm link .
+            npm install --unsafe-perm=true
+            npm rebuild
       - run:
           name: npm test
           command: |
             source ~/.profile
-            npm rebuild
             docker -v
+            architect -v
             npm test
