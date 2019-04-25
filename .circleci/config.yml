@@ -30,9 +30,9 @@ jobs:
           name: node -v
           command: |
             source ~/.profile
-            nvm use default
             node -v
-      - run: npm -v
       - run:
           name: run tests
-          command: npm test
+          command: |
+            source ~/.profile
+            npm test
