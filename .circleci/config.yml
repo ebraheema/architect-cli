@@ -9,8 +9,8 @@ jobs:
       - run:
           name: clone submodules
           command: git submodule update --recursive --init
-      - run: apt-get update
-      - run: apt-get install python3
+      - run: sudo apt-get update
+      - run: sudo apt-get install python3
       - run:
           name: npm install
           command: rm -rf node_modules && npm install --unsafe-perm=true && npm link . && npm install --unsafe-perm=true
