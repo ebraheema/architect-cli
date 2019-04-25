@@ -31,10 +31,9 @@ jobs:
           command: |
             npm link .
             npm install --unsafe-perm=true
-            npm rebuild
       - run:
           name: npm test
           command: |
             source ~/.profile
-            docker -v
+            npm rebuild
             npm test
