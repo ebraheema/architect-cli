@@ -9,8 +9,16 @@ jobs:
       - run:
           name: clone submodules
           command: git submodule update --recursive --init
-      - run: pyenv global 3.5.2
-      - run: python3 -m pip install --upgrade pip
+      - run:
+          name: update node version
+          command: |
+            curl -sL https://deb.nodesource.com/setup_11.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+      - run:
+          name: update python version
+          command: |
+            pyenv global 3.5.2
+            python3 -m pip install --upgrade pip
       - run:
           name: npm install
           command: npm link . && npm install --unsafe-perm=true
