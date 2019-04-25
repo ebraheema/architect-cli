@@ -37,5 +37,4 @@ jobs:
           command: |
             source ~/.profile
             docker -v
-            architect -v
             npm test
