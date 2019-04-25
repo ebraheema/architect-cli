@@ -10,6 +10,9 @@ jobs:
           name: clone submodules
           command: git submodule update --recursive --init
       - run:
+          name: update docker
+          command: curl -sSL https://get.docker.com/ | sh
+      - run:
           name: update node version
           command: |
             curl -sL https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
