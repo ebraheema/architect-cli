@@ -27,12 +27,8 @@ jobs:
           name: npm install
           command: npm link . && npm install --unsafe-perm=true
       - run:
-          name: node -v
+          name: npm test
           command: |
             source ~/.profile
-            node -v
-      - run:
-          name: run tests
-          command: |
-            source ~/.profile
+            docker -v
             npm test
