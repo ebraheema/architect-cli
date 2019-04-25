@@ -35,7 +35,7 @@ jobs:
           name: python test
           command: |
             source ~/.profile
-            python3 -m pip install Click grpcio importlib
+            python3 -m pip install Click grpcio
             python3 -m pip freeze
             ls -l /opt/circleci/.pyenv/versions/3.5.2/lib/python3.5/site-packages/
       - run:
