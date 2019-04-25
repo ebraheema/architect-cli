@@ -12,11 +12,11 @@ jobs:
       - run:
           name: update node version
           command: |
-            curl -sL https://deb.nodesource.com/setup_11.x | sudo -E bash -
-            sudo apt-get install -y nodejs
-            sudo rm /usr/bin/node
-            sudo ln -sf /usr/bin/nodejs /usr/bin/node
-            ls -l /usr/bin/node*
+            curl -sL https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
+            source ~/.profile
+            nvm install 11
+            nvm alias default 11
+            nvm use default
             node -v
       - run:
           name: update python version
@@ -29,7 +29,8 @@ jobs:
       - run:
           name: node -v
           command: |
-            ls -l /usr/bin/node*
+            source ~/.profile
+            nvm use default
             node -v
       - run: npm -v
       - run:
