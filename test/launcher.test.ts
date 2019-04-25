@@ -1,4 +1,4 @@
-import {expect} from '@oclif/test';
+import {expect, test} from '@oclif/test';
 import {execSync, spawn, spawnSync} from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -68,7 +68,8 @@ describe('launchers', () => {
         fs.writeFileSync(tmp_config_path, JSON.stringify({}));
 
         const service_path = path.join(__dirname, `./calculator-example/${language}-subtraction-service/`);
-        execSync(`architect install --prefix=${service_path} --recursive`);
+        const architect_cmd = path.join(__dirname, '../bin/run');
+        execSync(`${architect_cmd} install --prefix=${service_path} --recursive`);
 
         const cmd = spawn(script_path, [
           '--service_path', service_path,
