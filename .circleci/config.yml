@@ -7,13 +7,13 @@ jobs:
     steps:
       - checkout
       - run:
-          name: clone submodules
+          name: Clone submodules
           command: git submodule update --recursive --init
       - run:
-          name: update docker
+          name: Update docker version
           command: curl -sSL https://get.docker.com/ | sh
       - run:
-          name: update node version
+          name: Update node version
           command: |
             curl -sL https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
             source ~/.profile
@@ -22,7 +22,7 @@ jobs:
             nvm use default
             node -v
       - run:
-          name: update python version
+          name: Update python version
           command: |
             pyenv global 3.5.2
             python3 -m pip install --upgrade pip
@@ -31,13 +31,6 @@ jobs:
           command: |
             npm link .
             npm install --unsafe-perm=true
-      - run:
-          name: python test
-          command: |
-            source ~/.profile
-            python3 -m pip install Click grpcio
-            python3 -m pip freeze
-            ls -l /opt/circleci/.pyenv/versions/3.5.2/lib/python3.5/site-packages/
       - run:
           name: npm test
           command: |

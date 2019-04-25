@@ -96,6 +96,10 @@ describe('launchers', () => {
           }
         });
 
+        cmd.on('error', e => {
+          throw e;
+        });
+
         cmd.on('close', code => {
           expect(isDone).to.be.eq(true);
           expect(code).to.be.eq(null);
