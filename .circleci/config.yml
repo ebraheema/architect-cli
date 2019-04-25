@@ -17,6 +17,7 @@ jobs:
             sudo rm /usr/bin/node
             sudo ln -sf /usr/bin/nodejs /usr/bin/node
             ls -l /usr/bin/node*
+            node -v
       - run:
           name: update python version
           command: |
@@ -25,7 +26,11 @@ jobs:
       - run:
           name: npm install
           command: npm link . && npm install --unsafe-perm=true
-      - run: node -v
+      - run:
+          name: node -v
+          command: |
+            ls -l /usr/bin/node*
+            node -v
       - run: npm -v
       - run:
           name: run tests
