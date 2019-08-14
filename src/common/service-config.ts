@@ -73,12 +73,12 @@ export default class ServiceConfig {
   dependencies: { [s: string]: string };
   parameters: { [s: string]: ServiceParameter } = {};
   api?: { type: string, definitions: string[] };
-  datastores: { [key: string]: { image: string, port: string, parameters: { [key: string]: ServiceParameter }, host?: string } };
+  datastores: { [key: string]: { image: string, port: number, parameters: { [key: string]: ServiceParameter }, host?: string } };
   notifications: string[];
   subscriptions: object;
   language: SUPPORTED_LANGUAGES;
   host?: string;
-  port: string;
+  port: number;
   debug?: string;
 
   constructor() {
@@ -93,7 +93,7 @@ export default class ServiceConfig {
     this.notifications = [];
     this.subscriptions = {};
     this.language = SUPPORTED_LANGUAGES.NODE;
-    this.port = '8080';
+    this.port = 8080;
   }
 
   get full_name() {
@@ -185,7 +185,7 @@ export default class ServiceConfig {
     return this;
   }
 
-  setDatastores(datastores: { [key: string]: { image: string, port: string, parameters: { [key: string]: ServiceParameter }, host?: string } }) {
+  setDatastores(datastores: { [key: string]: { image: string, port: number, parameters: { [key: string]: ServiceParameter }, host?: string } }) {
     this.datastores = datastores || {};
     for (const [ds_key, datastore] of Object.entries(this.datastores)) {
       if (!EnvironmentNameValidator.test(ds_key)) {
@@ -221,8 +221,8 @@ export default class ServiceConfig {
     return this;
   }
 
-  setPort(port: string) {
-    this.port = port || '8080';
+  setPort(port: number) {
+    this.port = port || 8080;
     return this;
   }
 

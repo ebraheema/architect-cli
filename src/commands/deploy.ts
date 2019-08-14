@@ -99,6 +99,10 @@ export default class Deploy extends Command {
     return config_json;
   }
 
+  async run_local2() {
+
+  }
+
   async run_local() {
     const { args } = this.parse(Deploy);
     let root_service_path = args.service ? args.service : process.cwd();
