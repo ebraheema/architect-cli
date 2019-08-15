@@ -16,6 +16,13 @@ interface ConfigConstructorProps {
   service_config: ServiceConfig;
 }
 
+interface SubscriberParam {
+  [service_name: string]: {
+    uri: string;
+    headers?: { [key: string]: string };
+  };
+}
+
 interface ArchitectParam {
   host: string;
   port: number;
@@ -25,12 +32,7 @@ interface ArchitectParam {
     [datastore_key: string]: object
   };
   subscriptions?: {
-    [event_name: string]: {
-      [service_name: string]: {
-        uri: string;
-        headers?: object;
-      }
-    };
+    [event_name: string]: SubscriberParam
   };
 }
 
@@ -90,6 +92,7 @@ export abstract class DeploymentServiceConfig {
         port: this.expose_port,
         api: this.service_config.api.type,
         parameters: this.parameters,
+        subscriptions: {},
         datastores: Object.keys(this.service_config.datastores).reduce((datastores: { [key: string]: object }, key) => {
           const dep_name = `${this.service_config.full_name}.datastore.${key}`;
 
@@ -100,9 +103,9 @@ export abstract class DeploymentServiceConfig {
 
           datastores[key] = {
             // tslint:disable-next-line:no-http-string
-            host: 'http://host.docker.internal',
+            host: 'host.docker.internal',
             port: deployment_config.expose_port,
-            parameters: deployment_config.parameters
+            ...deployment_config.parameters
           };
           return datastores;
         }, {}),
@@ -125,8 +128,8 @@ export abstract class DeploymentServiceConfig {
 
       return {
         ...this.parameters,
-        HOST: architect_param[this.service_config.name].host,
-        PORT: architect_param[this.service_config.name].port,
+        HOST: this.normalized_name,
+        PORT: this.target_port,
         ARCHITECT_CURRENT_SERVICE: this.service_config.name,
         ARCHITECT: JSON.stringify(architect_param),
       };
@@ -183,6 +186,10 @@ export abstract class DeploymentServiceConfig {
       let expose_port = await PortUtil.getAvailablePort();
       let parameters = Object.keys(config.parameters).reduce((params: { [key: string]: string | number | null }, key) => {
         params[key] = config.parameters[key].default!;
+        if (config.parameters[key].alias) {
+          params[config.parameters[key].alias!] = params[key];
+        }
+
         return params;
       }, {});
 
@@ -198,6 +205,9 @@ export abstract class DeploymentServiceConfig {
             parameters = Object.keys(env_datastore_config.parameters).reduce((params: { [key: string]: string | number | null }, key) => {
               if (env_datastore_config.parameters && env_datastore_config.parameters.hasOwnProperty(key)) {
                 params[key] = env_datastore_config.parameters[key];
+                if (config.parameters[key].alias) {
+                  params[config.parameters[key].alias!] = params[key];
+                }
               }
 
               return params;
@@ -253,6 +263,10 @@ export class DockerDeploymentServiceConfig extends DeploymentServiceConfig {
             params[key] = env_service_config.parameters[key];
           } else {
             params[key] = service_config.parameters[key].default!;
+          }
+
+          if (service_config.parameters[key].alias) {
+            params[service_config.parameters[key].alias!] = params[key];
           }
 
           return params;
@@ -316,6 +330,10 @@ export class LocalDeploymentServiceConfig extends DeploymentServiceConfig {
           params[key] = env_service_config.parameters[key];
         } else {
           params[key] = service_config.parameters[key].default!;
+        }
+
+        if (service_config.parameters[key].alias) {
+          params[service_config.parameters[key].alias!] = params[key];
         }
 
         return params;
