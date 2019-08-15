@@ -154,7 +154,7 @@ export abstract class DeploymentServiceConfig {
     return res;
   }
 
-  protected async load_dependencies() {
+  public async load_dependencies() {
     // Load explicit dependencies
     for (const [name, identifier] of Object.entries(this.service_config.dependencies)) {
       let config;
@@ -240,60 +240,6 @@ interface DockerConfigConstructorProps extends ConfigConstructorProps {
 }
 
 export class DockerDeploymentServiceConfig extends DeploymentServiceConfig {
-  static async create(
-    app_config: AppConfig,
-    environment_metadata: EnvironmentMetadata,
-    service_name: string,
-    service_version: string,
-    _docker_pull_retry = true,
-  ): Promise<DockerDeploymentServiceConfig | undefined> {
-    const repository_name = url.resolve(`${app_config.default_registry_host}/`, `${service_name}:${service_version}`);
-
-    try {
-      const { stdout } = await execa('docker', ['inspect', repository_name, '--format', '{{ index .Config.Labels "architect.json"}}']);
-      const service_config = ServiceConfig.create(JSON.parse(stdout));
-      const env_service_config = environment_metadata.services[service_config.full_name];
-
-      // Check if a host was already configured for the service
-      if (env_service_config.host) return;
-
-      const parameters = Object.keys(service_config.parameters)
-        .reduce((params: { [key: string]: string | number | null }, key) => {
-          if (env_service_config.parameters && env_service_config.parameters.hasOwnProperty(key)) {
-            params[key] = env_service_config.parameters[key];
-          } else {
-            params[key] = service_config.parameters[key].default!;
-          }
-
-          if (service_config.parameters[key].alias) {
-            params[service_config.parameters[key].alias!] = params[key];
-          }
-
-          return params;
-        }, {});
-
-      const response = new DockerDeploymentServiceConfig({
-        name: service_config.full_name,
-        image: repository_name,
-        expose_port: env_service_config.port || await PortUtil.getAvailablePort(),
-        parameters,
-        app_config,
-        environment_metadata,
-        service_config,
-      });
-
-      await response.load_dependencies();
-      return response;
-    } catch {
-      if (_docker_pull_retry) {
-        await execa('docker', ['pull', repository_name]);
-        return DockerDeploymentServiceConfig.create(app_config, environment_metadata, service_name, service_version, false);
-      }
-    }
-
-    throw new Error(`Unable to load config for ${service_name}:${service_version}`);
-  }
-
   public image: string;
 
   constructor(props: DockerConfigConstructorProps) {
@@ -312,49 +258,6 @@ interface LocalConfigConstructorProps extends ConfigConstructorProps {
 }
 
 export class LocalDeploymentServiceConfig extends DeploymentServiceConfig {
-  static async create(
-    app_config: AppConfig,
-    environment_metadata: EnvironmentMetadata,
-    service_path: string
-  ): Promise<LocalDeploymentServiceConfig | undefined> {
-    service_path = path.resolve(service_path);
-    const service_config = ServiceConfig.loadFromPath(service_path);
-    const env_service_config = environment_metadata.services[service_config.full_name];
-
-    // Check if a host was already configured for the service
-    if (env_service_config && env_service_config.host) return;
-
-    const parameters = Object.keys(service_config.parameters)
-      .reduce((params: { [key: string]: string | number | null }, key) => {
-        if (env_service_config && env_service_config.parameters && env_service_config.parameters.hasOwnProperty(key)) {
-          params[key] = env_service_config.parameters[key];
-        } else {
-          params[key] = service_config.parameters[key].default!;
-        }
-
-        if (service_config.parameters[key].alias) {
-          params[service_config.parameters[key].alias!] = params[key];
-        }
-
-        return params;
-      }, {});
-
-    const expose_port = env_service_config && env_service_config.port;
-    const response = new LocalDeploymentServiceConfig({
-      name: service_config.full_name,
-      command: service_config.debug,
-      build_path: service_path,
-      expose_port: expose_port || await PortUtil.getAvailablePort(),
-      parameters,
-      app_config,
-      environment_metadata,
-      service_config,
-    });
-
-    await response.load_dependencies();
-    return response;
-  }
-
   public command?: string;
   public build_path: string;
 
