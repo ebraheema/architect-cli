@@ -72,7 +72,7 @@ export default class ServiceConfig {
   license: string;
   dependencies: { [s: string]: string };
   parameters: { [s: string]: ServiceParameter } = {};
-  api?: { type: string, definitions: string[] };
+  api: { type: string, definitions?: string[] };
   datastores: { [key: string]: { image: string, port: number, parameters: { [key: string]: ServiceParameter }, host?: string } };
   notifications: string[];
   subscriptions: object;
@@ -94,6 +94,9 @@ export default class ServiceConfig {
     this.subscriptions = {};
     this.language = SUPPORTED_LANGUAGES.NODE;
     this.port = 8080;
+    this.api = {
+      type: 'rest'
+    };
   }
 
   get full_name() {
@@ -212,7 +215,7 @@ export default class ServiceConfig {
   }
 
   setSubscriptions(subscriptions: object) {
-    this.subscriptions = subscriptions;
+    this.subscriptions = subscriptions || {};
     return this;
   }
 
