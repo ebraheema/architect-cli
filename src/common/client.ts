@@ -27,13 +27,13 @@ export default class ArchitectClient {
 
   async login(username: string, password: string) {
     await this.logout();
-    await credentials.setPassword('architect.io', username, password);
+    await credentials.setPassword(this.app_config.default_registry_host, username, password);
     await this.refreshToken();
   }
 
   async logout() {
-    await credentials.deletePassword('architect.io');
-    await credentials.deletePassword('architect.io/token');
+    await credentials.deletePassword(this.app_config.default_registry_host);
+    await credentials.deletePassword(`${this.app_config.default_registry_host}/token`);
   }
 
   async getUser(): Promise<UserEntity> {
@@ -67,7 +67,7 @@ export default class ArchitectClient {
       clientId: this.app_config.oauth_client_id,
     });
 
-    const credential = await credentials.findCredential('architect.io');
+    const credential = await credentials.findCredential(this.app_config.default_registry_host);
     if (!credential) {
       throw Error('`architect login` required');
     }
@@ -89,12 +89,12 @@ export default class ArchitectClient {
     const profile = await auth0.getProfile(auth_result.access_token);
     auth_result.profile = profile;
     auth_result.issued_at = issued_at;
-    await credentials.setPassword('architect.io/token', username, JSON.stringify(auth_result));
+    await credentials.setPassword(`${this.app_config.default_registry_host}/token`, username, JSON.stringify(auth_result));
     return auth_result;
   }
 
   async getToken() {
-    const credential = await credentials.findCredential('architect.io/token');
+    const credential = await credentials.findCredential(`${this.app_config.default_registry_host}/token`);
     if (!credential) {
       return;
     }
