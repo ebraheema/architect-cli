@@ -30,5 +30,7 @@ describe('manager', function () {
     expect(graph.nodes).lengthOf(4);
     expect(graph.nodes[0]).instanceOf(LocalServiceNode);
     expect(graph.edges).lengthOf(3);
+    console.log(graph.nodes[0]);
+    expect(graph.nodes[0].normalized_ref).eq('architect.division-service-grpc.latest');
   });
 });

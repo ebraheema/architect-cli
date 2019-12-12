@@ -15,6 +15,16 @@ export class LocalServiceNode extends DependencyNode implements LocalServiceNode
   command?: string;
   api!: { type: string; definitions?: string[] };
 
+  // @Type(() => ServiceConfig, {
+  //   discriminator: {
+  //     property: "__type",
+  //     subTypes: [
+  //       { value: ServiceConfigV1, name: "v1.0.0" },
+  //     ],
+  //   },
+  // })
+  // service_config!: ServiceConfig;
+
   constructor(options: LocalServiceNodeOptions & DependencyNodeOptions) {
     super(options);
   }
