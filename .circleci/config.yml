@@ -186,7 +186,7 @@ workflows:
       #         only: /^v.*/
       #       branches:
       #         ignore: /.*/
-      - publish_cli_binaries
+      - publish_cli_binaries:
           filters:
             tags:
               only: /^v.*/
