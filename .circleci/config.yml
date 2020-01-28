@@ -83,10 +83,10 @@ jobs:
       - run: npm install
       - run:
           name: Install publish dependencies
-          command: apt update && apt install -y p7zip-full && npm install -g @oclif/dev-cli
+          command: apt update && apt install -y p7zip-full libsecret-1-dev && npm install -g @oclif/dev-cli
       - run:
           name: Build CLI binaries
-          command: oclif-dev pack && ls -la ./dist/architect-${CIRCLE_TAG}/architect-${CIRCLE_TAG}
+          command: oclif-dev pack && ls -la ./dist/architect-${CIRCLE_TAG}/
       - run:
           name: Push artifacts to tag
           command: curl -F ‘data=@./dist/architect-v1.0.0/architect-v1.0.0-darwin-x64.tar.gz’ -X POST https://uploads.github.com/repos/architect-team/architect-cli/releases/v1.0.0/assets?name=architect-v1.0.0-darwin-x64.tar.gz
