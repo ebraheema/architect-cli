@@ -88,6 +88,16 @@ jobs:
           name: Build CLI binaries
           command: oclif-dev pack && ls -la ./dist/architect-${CIRCLE_TAG}/
       - run:
+          name: Create release
+          command: |
+            curl --data '{"tag_name": "${CIRCLE_TAG}",
+              "target_commitish": "tag-testing",
+              "name": "${CIRCLE_TAG}",
+              "body": "Release of version ${CIRCLE_TAG}",
+              "draft": false,
+              "prerelease": false}' \
+                https://api.github.com/repos/architect-team/architect-cli/releases?access_token=d00cd309a518417ff666d4b45d5c1cc7a0ec7a9c
+      - run:
           name: Push artifacts to tag TODO create release first
           command: curl -F data=@./dist/architect-v1.0.0/architect-v1.0.0-darwin-x64.tar.gz -X POST https://uploads.github.com/repos/architect-team/architect-cli/releases/${CIRCLE_TAG}/assets?name=architect-${CIRCLE_TAG}-darwin-x64.tar.gz
 
