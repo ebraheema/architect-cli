@@ -83,7 +83,7 @@ jobs:
       - run: npm install
       - run:
           name: Install publish dependencies
-          command: apt update && apt install -y p7zip-full && npm install -g oclif-dev
+          command: apt update && apt install -y p7zip-full && npm install -g @oclif/dev-cli
       - run:
           name: Build CLI binaries
           command: oclif-dev pack && ls -la ./dist/architect-${CIRCLE_TAG}/architect-${CIRCLE_TAG}
