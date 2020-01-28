@@ -73,6 +73,21 @@ jobs:
             - package.json
             - package-lock.json
             - README.md
+
+  publish_cli_binaries:
+    executor: release
+    steps:
+      - checkout
+      - restore_cache:
+          keys: *cache_config
+      - run: npm install
+      - run:
+        name: Install publish dependencies
+        command: apt update && apt install p7zip-full && npm install -g oclif-dev
+      - run:
+        name: Build CLI binaries
+        command: oclif-dev pack && ls -la ./dist/architect-${CIRCLE_TAG}/architect-${CIRCLE_TAG}
+
   # publish_cli:
   #   executor: release
   #   steps:
@@ -171,3 +186,9 @@ workflows:
       #         only: /^v.*/
       #       branches:
       #         ignore: /.*/
+      - publish_cli_binaries
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
