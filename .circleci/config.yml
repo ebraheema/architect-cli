@@ -89,7 +89,7 @@ jobs:
           command: oclif-dev pack && ls -la ./dist/architect-${CIRCLE_TAG}/architect-${CIRCLE_TAG}
       - run:
           name: Push artifacts to tag
-          command: curl -F ‘data=@./dist/architect-v0.3.9/architect-v0.3.9-darwin-x64.tar.gz’ -X POST https://uploads.github.com/repos/architect-team/architect-cli/releases/v1-test/assets?name=architect-v0.3.9-darwin-x64.tar.gz
+          command: curl -F ‘data=@./dist/architect-v1.0.0/architect-v1.0.0-darwin-x64.tar.gz’ -X POST https://uploads.github.com/repos/architect-team/architect-cli/releases/v1.0.0/assets?name=architect-v1.0.0-darwin-x64.tar.gz
 
   # publish_cli:
   #   executor: release
