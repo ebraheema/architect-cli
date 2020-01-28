@@ -82,11 +82,11 @@ jobs:
           keys: *cache_config
       - run: npm install
       - run:
-        name: Install publish dependencies
-        command: apt update && apt install p7zip-full && npm install -g oclif-dev
+          name: Install publish dependencies
+          command: apt update && apt install p7zip-full && npm install -g oclif-dev
       - run:
-        name: Build CLI binaries
-        command: oclif-dev pack && ls -la ./dist/architect-${CIRCLE_TAG}/architect-${CIRCLE_TAG}
+          name: Build CLI binaries
+          command: oclif-dev pack && ls -la ./dist/architect-${CIRCLE_TAG}/architect-${CIRCLE_TAG}
 
   # publish_cli:
   #   executor: release
