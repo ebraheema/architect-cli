@@ -135,7 +135,7 @@ OPTIONS
   -h, --help                       show CLI help
   -l, --local                      Deploy the stack locally instead of via Architect Cloud
 
-  -o, --compose_file=compose_file  [default: /tmp/architect-deployment-1580225224831.json] Path where the compose file
+  -o, --compose_file=compose_file  [default: /tmp/architect-deployment-1580229340717.json] Path where the compose file
                                    should be written to
 
   --auto_approve
