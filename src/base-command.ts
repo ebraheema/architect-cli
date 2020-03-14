@@ -30,6 +30,7 @@ export default abstract class extends Command {
   }
 
   async catch(err: any) {
+    console.error(err);
     if (err.oclif && err.oclif.exit === 0) return;
 
     if (err.response && err.response.data) {
