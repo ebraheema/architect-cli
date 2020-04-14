@@ -1,7 +1,7 @@
 import { Type } from 'class-transformer';
 import { DependencyNode, DependencyNodeOptions } from '.';
-import { ServiceConfig } from '../../service-config/base';
-import { ServiceConfigV1 } from '../../service-config/v1';
+import { ServiceConfig } from '../../configs/service';
+import { ServiceSpecV1 } from '../../configs/v1-spec/service';
 
 export interface ServiceNodeOptions {
   image: string;
@@ -21,7 +21,7 @@ export class ServiceNode extends DependencyNode implements ServiceNodeOptions {
     discriminator: {
       property: '__version',
       subTypes: [
-        { value: ServiceConfigV1, name: '1.0.0' },
+        { value: ServiceSpecV1, name: '1.0.0' },
       ],
     },
     keepDiscriminatorProperty: true,
@@ -32,7 +32,7 @@ export class ServiceNode extends DependencyNode implements ServiceNodeOptions {
     discriminator: {
       property: '__version',
       subTypes: [
-        { value: ServiceConfigV1, name: '1.0.0' },
+        { value: ServiceSpecV1, name: '1.0.0' },
       ],
     },
     keepDiscriminatorProperty: true,

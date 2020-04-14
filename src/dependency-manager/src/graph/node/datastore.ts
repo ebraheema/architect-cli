@@ -1,5 +1,5 @@
 import { DependencyNode, DependencyNodeOptions } from '.';
-import { ServiceDatastore } from '../../service-config/base';
+import { ServiceDatastore } from '../../configs/service';
 
 interface DatastoreNodeOptions {
   parent_ref: string;

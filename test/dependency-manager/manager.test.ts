@@ -8,9 +8,9 @@ import LocalDependencyGraph from '../../src/common/dependency-manager/local-grap
 import LocalDependencyManager from '../../src/common/dependency-manager/local-manager';
 import { LocalServiceNode } from '../../src/common/dependency-manager/local-service-node';
 import { ServiceNode } from '../../src/dependency-manager/src';
+import { ServiceSpecV1 } from '../../src/dependency-manager/src/configs/v1-spec/service';
 import DependencyGraph from '../../src/dependency-manager/src/graph';
 import ServiceEdge from '../../src/dependency-manager/src/graph/edge/service';
-import { ServiceConfigV1 } from '../../src/dependency-manager/src/service-config/v1';
 
 describe('manager', function () {
   let graph: DependencyGraph;
@@ -35,7 +35,7 @@ describe('manager', function () {
     expect(graph.version).eq('1.0.0')
     expect(graph.nodes).lengthOf(4);
     expect(graph.nodes[0]).instanceOf(LocalServiceNode);
-    expect((graph.nodes[0] as LocalServiceNode).service_config).instanceOf(ServiceConfigV1);
+    expect((graph.nodes[0] as LocalServiceNode).service_config).instanceOf(ServiceSpecV1);
 
     expect(graph.edges).lengthOf(3);
     expect(graph.edges[0]).instanceOf(ServiceEdge);
@@ -46,8 +46,8 @@ describe('manager', function () {
       tag: 'test',
       image: 'image',
       digest: '56546546',
-      service_config: new ServiceConfigV1(),
-      node_config: new ServiceConfigV1(),
+      service_config: new ServiceSpecV1(),
+      node_config: new ServiceSpecV1(),
     });
     expect(node.tag).eq('test');
 

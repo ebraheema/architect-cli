@@ -3,8 +3,8 @@ import { plainToClass } from 'class-transformer';
 import fs from 'fs-extra';
 import yaml from 'js-yaml';
 import path from 'path';
-import { ServiceConfig } from './base';
-import { ServiceConfigV1 } from './v1';
+import { ServiceConfig } from './service';
+import { ServiceSpecV1 } from './v1-spec/service';
 
 class MissingConfigFileError extends Error {
   constructor(filepath: string) {
@@ -61,7 +61,7 @@ export class ServiceConfigBuilder {
   }
 
   static buildFromJSON(obj: object): ServiceConfig {
-    return plainToClass(ServiceConfigV1, obj);
+    return plainToClass(ServiceSpecV1, obj);
   }
 
   static saveToPath(input: string, config: ServiceConfig) {

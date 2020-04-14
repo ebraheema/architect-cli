@@ -1,8 +1,8 @@
 import { plainToClass } from 'class-transformer';
 import { Transform, Type } from 'class-transformer/decorators';
-import { ParameterValue } from '../manager';
-import { Dict } from '../utils/transform';
-import { ServiceApiSpec, ServiceConfig, ServiceDatastore, ServiceDebugOptions, ServiceEventNotifications, ServiceEventSubscriptions, ServiceInterfaceSpec, ServiceParameter, VolumeSpec } from './base';
+import { ParameterValue } from '../../manager';
+import { Dict } from '../../utils/transform';
+import { ServiceApiSpec, ServiceConfig, ServiceDatastore, ServiceDebugOptions, ServiceEventNotifications, ServiceEventSubscriptions, ServiceInterfaceSpec, ServiceParameter, VolumeSpec } from '../service';
 
 function transformParameters(input: any) {
   const output: any = {};
@@ -101,7 +101,7 @@ interface IngressSpecV1 {
   subdomain: string;
 }
 
-export class ServiceConfigV1 extends ServiceConfig {
+export class ServiceSpecV1 extends ServiceConfig {
   __version = '1.0.0';
   name?: string;
   description?: string;

@@ -1,7 +1,8 @@
 import dotenvExpand from 'dotenv-expand';
 import { ServiceConfigBuilder, ServiceNode } from '.';
-import { EnvironmentConfig } from './environment-config/base';
-import { EnvironmentConfigBuilder } from './environment-config/builder';
+import { EnvironmentConfig } from './configs/environment';
+import { EnvironmentConfigBuilder } from './configs/environment.builder';
+import { ServiceConfig } from './configs/service';
 import DependencyGraph from './graph';
 import NotificationEdge from './graph/edge/notification';
 import ServiceEdge from './graph/edge/service';
@@ -9,7 +10,6 @@ import { DependencyNode } from './graph/node';
 import { DatastoreNode } from './graph/node/datastore';
 import { ExternalNode } from './graph/node/external';
 import GatewayNode from './graph/node/gateway';
-import { ServiceConfig } from './service-config/base';
 import VaultManager from './vault-manager';
 
 export interface VaultParameter {

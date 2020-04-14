@@ -2,8 +2,8 @@
 import { plainToClass } from 'class-transformer';
 import fs from 'fs-extra';
 import yaml from 'js-yaml';
-import { EnvironmentConfig } from './base';
-import { EnvironmentConfigV1 } from './v1';
+import { EnvironmentConfig } from './environment';
+import { EnvironmentSpecV1 } from './v1-spec/environment';
 
 class MissingConfigFileError extends Error {
   constructor(filepath: string) {
@@ -44,7 +44,7 @@ export class EnvironmentConfigBuilder {
   }
 
   static buildFromJSON(obj: object): EnvironmentConfig {
-    return plainToClass(EnvironmentConfigV1, obj);
+    return plainToClass(EnvironmentSpecV1, obj);
   }
 
   static saveToPath(config_path: string, config: EnvironmentConfig) {

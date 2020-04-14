@@ -1,8 +1,8 @@
 import { Transform } from 'class-transformer/decorators';
-import { ServiceConfig } from '../service-config/base';
-import { ServiceConfigV1 } from '../service-config/v1';
-import { Dict } from '../utils/transform';
-import { EnvironmentConfig, EnvironmentParameters, EnvironmentVault } from './base';
+import { Dict } from '../../utils/transform';
+import { EnvironmentConfig, EnvironmentParameters, EnvironmentVault } from '../environment';
+import { ServiceConfig } from '../service';
+import { ServiceSpecV1 } from './service';
 
 interface VaultMap {
   [vault_name: string]: {
@@ -19,10 +19,10 @@ interface DnsConfigSpec {
   searches?: string | string[];
 }
 
-export class EnvironmentConfigV1 extends EnvironmentConfig {
+export class EnvironmentSpecV1 extends EnvironmentConfig {
   __version = '1.0.0';
   protected parameters: EnvironmentParameters = {};
-  @Transform(Dict(() => ServiceConfigV1), { toClassOnly: true })
+  @Transform(Dict(() => ServiceSpecV1), { toClassOnly: true })
   protected services: { [service_ref: string]: ServiceConfig } = {};
   protected vaults: VaultMap = {};
   protected dns?: DnsConfigSpec;
