@@ -8,8 +8,8 @@ import LocalDependencyManager from '../../src/common/dependency-manager/local-ma
 import { LocalServiceNode } from '../../src/common/dependency-manager/local-service-node';
 import * as DockerCompose from '../../src/common/docker-compose';
 import PortUtil from '../../src/common/utils/port';
+import { ValueFromParameter } from '../../src/dependency-manager/src';
 import { ExternalNode } from '../../src/dependency-manager/src/graph/node/external';
-import { ValueFromParameter } from '../../src/dependency-manager/src/manager';
 
 describe('interfaces', function () {
 

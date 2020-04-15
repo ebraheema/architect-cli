@@ -80,6 +80,6 @@ describe('uninstall', () => {
     const input_config = save_spy.firstCall.args[1];
     delete subtraction_config.dependencies['architect/addition-service-grpc'];
     expect(input_config.name).to.equal(subtraction_config.name);
-    expect(input_config.dependencies).eql(subtraction_config.dependencies);
+    expect(input_config.dependencies).eql(new Map(Object.entries(subtraction_config.dependencies)));
   });
 });

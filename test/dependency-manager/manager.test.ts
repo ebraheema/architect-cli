@@ -23,6 +23,7 @@ describe('manager', function () {
     const manager = await LocalDependencyManager.createFromPath(axios.create(), calculator_env_config_path);
     const serialized_graph = serialize(manager.graph);
     graph = deserialize(LocalDependencyGraph, serialized_graph);
+    console.log(graph.nodes[0]);
   });
 
   afterEach(function () {
@@ -32,6 +33,7 @@ describe('manager', function () {
 
   it('serialize/deserialize graph', async () => {
 
+    // console.log(graph.nodes);
     expect(graph.version).eq('1.0.0')
     expect(graph.nodes).lengthOf(4);
     expect(graph.nodes[0]).instanceOf(LocalServiceNode);

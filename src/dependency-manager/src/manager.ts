@@ -1,8 +1,8 @@
 import dotenvExpand from 'dotenv-expand';
-import { ServiceConfigBuilder, ServiceNode } from '.';
+import { ServiceNode } from '.';
 import { EnvironmentConfig } from './configs/environment';
 import { EnvironmentConfigBuilder } from './configs/environment.builder';
-import { ServiceConfig } from './configs/service';
+import { DatastoreValueFromParameter, ServiceConfig, ValueFromParameter, VaultParameter } from './configs/service';
 import DependencyGraph from './graph';
 import NotificationEdge from './graph/edge/notification';
 import ServiceEdge from './graph/edge/service';
@@ -11,30 +11,6 @@ import { DatastoreNode } from './graph/node/datastore';
 import { ExternalNode } from './graph/node/external';
 import GatewayNode from './graph/node/gateway';
 import VaultManager from './vault-manager';
-
-export interface VaultParameter {
-  valueFrom: {
-    vault: string;
-    key: string;
-  };
-}
-
-export interface ValueFromParameter {
-  valueFrom: {
-    dependency: string;
-    value: string;
-    interface?: string;
-  };
-}
-
-export interface DatastoreValueFromParameter {
-  valueFrom: {
-    datastore: string;
-    value: string;
-  };
-}
-
-export type ParameterValue = string | number | ValueFromParameter | VaultParameter | DatastoreValueFromParameter;
 
 export default abstract class DependencyManager {
   abstract graph: DependencyGraph;
@@ -50,39 +26,45 @@ export default abstract class DependencyManager {
   }
 
   getNodeConfig(service_config: ServiceConfig, tag: string) {
-    // Merge in global parameters
-    const global_overrides: any = {
-      parameters: {},
-      datastores: {},
-    };
+    const node_config = service_config.copy();
+
+    // Merge in global parameters from environment config
     const global_parameters = this._environment.getParameters();
-    for (const key of Object.keys(service_config.getParameters())) {
+    for (const key of Object.keys(node_config.getParameters())) {
       if (key in global_parameters) {
-        global_overrides.parameters[key] = global_parameters[key];
+        node_config.setParameter(key, global_parameters[key]);
       }
     }
-    for (const [datastore_name, datastore] of Object.entries(service_config.getDatastores())) {
+
+    // Merge in datastore parameter values from environment config
+    for (const [datastore_name, datastore] of Object.entries(node_config.getDatastores())) {
       for (const key of Object.keys(datastore.parameters)) {
         if (key in global_parameters) {
-          if (!global_overrides.datastores[datastore_name]) {
-            global_overrides.datastores[datastore_name] = { parameters: {} };
-          }
-          global_overrides.datastores[datastore_name].parameters[key] = global_parameters[key];
+          node_config.setDatastoreParameter(datastore_name, key, global_parameters[key]);
         }
       }
     }
-    let node_config = service_config.merge(ServiceConfigBuilder.buildFromJSON({ __version: service_config.__version, ...global_overrides }));
 
-    // Merge in service overrides in the environment
+    // Merge in service-specific parameter overrides
     const env_service = this._environment.getServiceDetails(`${service_config.getName()}:${tag}`) || this._environment.getServiceDetails(service_config.getName());
     if (env_service) {
-      node_config = node_config.merge(env_service);
+      Object.entries(env_service.getParameters()).forEach(([key, value]) => {
+        if (value.default) {
+          node_config.setParameter(key, value.default);
+        }
+      });
     }
 
     // If debug is enabled merge in debug options ex. debug.command -> command
     const debug_options = node_config.getDebugOptions();
     if (this.debug && debug_options) {
-      node_config = node_config.merge(ServiceConfigBuilder.buildFromJSON({ __version: node_config.__version, ...debug_options }));
+      node_config.setCommand(debug_options.command || node_config.getCommand());
+      node_config.setEntrypoint(debug_options.entrypoint || node_config.getEntrypoint());
+      node_config.setDockerfile(debug_options.dockerfile || node_config.getDockerfile());
+
+      Object.entries(debug_options.volumes || {}).forEach(([key, value]) => {
+        node_config.setVolume(key, value);
+      });
     }
     return node_config;
   }
@@ -318,8 +300,11 @@ export default abstract class DependencyManager {
     }
 
     const env_service = this._environment.getServiceDetails(service_ref);
-    if (env_service?.getInterfaces() && Object.values(env_service?.getInterfaces()).every((i) => (i.host))) {
-      return this.loadExternalService(env_service, service_ref);
+
+    const interfaces = env_service?.getInterfaces();
+    if (interfaces && Object.keys(interfaces).length > 0 && Object.values(interfaces).every((i) => (i.host))) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      return this.loadExternalService(env_service!, service_ref);
     }
 
     const service_node = await this.loadServiceNode(service_ref);

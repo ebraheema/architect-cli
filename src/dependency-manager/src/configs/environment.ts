@@ -1,5 +1,4 @@
-import { ParameterValue } from '../manager';
-import { ServiceConfig } from './service';
+import { ParameterValue, ServiceConfig } from './service';
 
 export interface EnvironmentParameters {
   [key: string]: ParameterValue;

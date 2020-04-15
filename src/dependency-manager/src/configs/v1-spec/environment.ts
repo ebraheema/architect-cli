@@ -1,45 +1,204 @@
-import { Transform } from 'class-transformer/decorators';
-import { Dict } from '../../utils/transform';
-import { EnvironmentConfig, EnvironmentParameters, EnvironmentVault } from '../environment';
-import { ServiceConfig } from '../service';
-import { ServiceSpecV1 } from './service';
+import { Type } from 'class-transformer';
+import { IsEnum, IsNumber, IsOptional, IsString, ValidateIf, ValidateNested } from 'class-validator';
+import { ConditionalType } from '../../utils/transform';
+import { EnvironmentConfig } from '../environment';
+import { ParameterValue } from '../service';
+import { mapToObject, SharedServiceSpecV1, ValueFromParameterSpecV1, VaultValueFromSpecV1 } from './shared';
 
-interface VaultMap {
-  [vault_name: string]: {
-    type: string;
-    host: string;
-    description?: string;
-    client_token?: string;
-    role_id?: string;
-    secret_id?: string;
-  };
+class IngressSpecV1 {
+  @IsString()
+  subdomain!: string;
 }
 
-interface DnsConfigSpec {
+class EnvironmentParameterSpecV1 {
+  @ValidateNested()
+  @IsOptional()
+  @ConditionalType([
+    {
+      matches: value => value.hasOwnProperty('vault'),
+      type: VaultValueFromSpecV1,
+    },
+    {
+      matches: value => value.hasOwnProperty('value'),
+      type: ValueFromParameterSpecV1,
+    },
+  ])
+  value_from?: VaultValueFromSpecV1 | ValueFromParameterSpecV1;
+
+  @ValidateIf(obj => !obj.value_from)
+  @ConditionalType([
+    {
+      matches: value => value.hasOwnProperty('vault'),
+      type: VaultValueFromSpecV1,
+    },
+    {
+      matches: value => value.hasOwnProperty('value'),
+      type: ValueFromParameterSpecV1,
+    },
+  ])
+  valueFrom?: VaultValueFromSpecV1 | ValueFromParameterSpecV1;
+}
+
+class EnvironmentDatastoreSpecV1 {
+  @IsNumber()
+  port?: number;
+
+  @IsString()
+  image?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @ConditionalType([
+    {
+      matches: value => typeof value === 'string',
+      type: String,
+    },
+    {
+      matches: value => typeof value === 'number',
+      type: Number,
+    },
+    {
+      matches: value => typeof value === 'object',
+      type: EnvironmentParameterSpecV1,
+    },
+  ])
+  parameters?: Map<string, string | number | EnvironmentParameterSpecV1>;
+}
+
+class VaultSpecV1 {
+  @IsString()
+  @IsEnum(['hashicorp-vault'])
+  type!: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsString()
+  host!: string;
+
+  @IsString()
+  @ValidateIf(obj => !obj.role_id)
+  client_token?: string;
+
+  @IsString()
+  @IsOptional()
+  role_id?: string;
+
+  @IsString()
+  @IsOptional()
+  secret_id?: string;
+}
+
+class DnsConfigSpecV1 {
+  @IsOptional()
   searches?: string | string[];
 }
 
-export class EnvironmentSpecV1 extends EnvironmentConfig {
-  __version = '1.0.0';
-  protected parameters: EnvironmentParameters = {};
-  @Transform(Dict(() => ServiceSpecV1), { toClassOnly: true })
-  protected services: { [service_ref: string]: ServiceConfig } = {};
-  protected vaults: VaultMap = {};
-  protected dns?: DnsConfigSpec;
+class EnvironmentServiceSpecV1 extends SharedServiceSpecV1 {
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => IngressSpecV1)
+  ingress?: IngressSpecV1;
 
-  getDnsConfig(): DnsConfigSpec {
+  @IsNumber()
+  @IsOptional()
+  replicas?: number;
+
+  @IsOptional()
+  @ValidateNested()
+  @ConditionalType([
+    {
+      matches: value => typeof value === 'string',
+      type: String,
+    },
+    {
+      matches: value => typeof value === 'object',
+      type: EnvironmentParameterSpecV1,
+    },
+  ])
+  parameters?: Map<string, string | EnvironmentParameterSpecV1>;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => EnvironmentDatastoreSpecV1)
+  datastores?: Map<string, EnvironmentDatastoreSpecV1>;
+
+  getReplicas() {
+    return this.replicas || super.getReplicas();
+  }
+
+  getIngress() {
+    return this.ingress || super.getIngress();
+  }
+
+  getParameters() {
+    return mapToObject(this.parameters);
+  }
+
+  setParameter(key: string, value: string) {
+    this.parameters?.set(key, value);
+  }
+
+  getDatastores() {
+    return mapToObject(this.datastores);
+  }
+
+  setDatastoreParameter(datastore: string, param_key: string, param_value: ParameterValue) {
+    const config = this.datastores?.get(datastore);
+    if (config) {
+      config.parameters?.set(param_key, param_value);
+      this.datastores?.set(datastore, config);
+    }
+  }
+}
+
+export class EnvironmentSpecV1 extends EnvironmentConfig {
+  @IsString()
+  @IsOptional()
+  __version = '1.0.0';
+
+  @IsOptional()
+  @ValidateNested()
+  @ConditionalType([
+    {
+      matches: value => typeof value === 'string',
+      type: String,
+    },
+    {
+      matches: value => typeof value === 'object',
+      type: EnvironmentParameterSpecV1,
+    },
+  ])
+  parameters?: Map<string, string | EnvironmentParameterSpecV1>;
+
+  @ValidateNested()
+  @Type(() => EnvironmentServiceSpecV1)
+  services!: Map<string, EnvironmentServiceSpecV1>;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => VaultSpecV1)
+  vaults?: Map<string, VaultSpecV1>;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => DnsConfigSpecV1)
+  dns?: DnsConfigSpecV1;
+
+  getDnsConfig() {
     return this.dns || {};
   }
 
-  getParameters(): EnvironmentParameters {
-    return this.parameters;
+  getVaults() {
+    return mapToObject(this.vaults);
   }
 
-  getServices(): { [key: string]: ServiceConfig } {
-    return this.services;
+  getParameters() {
+    return mapToObject(this.parameters);
   }
 
-  getVaults(): { [key: string]: EnvironmentVault } {
-    return this.vaults;
+  getServices() {
+    return mapToObject(this.services);
   }
 }

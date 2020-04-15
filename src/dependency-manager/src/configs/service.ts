@@ -1,5 +1,28 @@
 import { classToClass, plainToClassFromExist } from 'class-transformer';
-import { ParameterValue } from '../manager';
+
+export interface VaultParameter {
+  valueFrom: {
+    vault: string;
+    key: string;
+  };
+}
+
+export interface ValueFromParameter {
+  valueFrom: {
+    dependency: string;
+    value: string;
+    interface?: string;
+  };
+}
+
+export interface DatastoreValueFromParameter {
+  valueFrom: {
+    datastore: string;
+    value: string;
+  };
+}
+
+export type ParameterValue = string | number | ValueFromParameter | VaultParameter | DatastoreValueFromParameter;
 
 interface RestSubscriptionData {
   uri: string;
@@ -78,15 +101,19 @@ export interface IngressSpec {
 
 export abstract class ServiceConfig {
   abstract __version: string;
-  abstract getName(): string;
   abstract getLanguage(): string;
   abstract getImage(): string;
   abstract getCommand(): string | string[];
+  abstract setCommand(command: string | string[]): void;
   abstract getEntrypoint(): string | string[];
+  abstract setEntrypoint(entrypoint: string | string[]): void;
   abstract getDockerfile(): string | undefined;
+  abstract setDockerfile(dockerfile?: string): void;
   abstract getDependencies(): { [s: string]: string };
   abstract getParameters(): { [s: string]: ServiceParameter };
+  abstract setParameter(key: string, value: ParameterValue): void;
   abstract getDatastores(): { [s: string]: ServiceDatastore };
+  abstract setDatastoreParameter(datastore: string, param_key: string, param_value: ParameterValue): void;
   abstract getApiSpec(): ServiceApiSpec;
   abstract getInterfaces(): { [s: string]: ServiceInterfaceSpec };
   abstract getNotifications(): ServiceEventNotifications;
@@ -97,14 +124,26 @@ export abstract class ServiceConfig {
   abstract removeDependency(dependency_name: string): void;
   abstract getPort(): number | undefined;
   abstract getVolumes(): { [s: string]: VolumeSpec };
-  abstract getIngress(): IngressSpec | undefined;
-  abstract getReplicas(): number;
+  abstract setVolume(key: string, volume: VolumeSpec): void;
+
+  getName(): string {
+    return '';
+  }
+
+  getIngress(): IngressSpec | undefined {
+    return undefined;
+  }
+
+  getReplicas(): number {
+    return 1;
+  }
 
   copy() {
     return classToClass(this);
   }
 
   merge(other_config: ServiceConfig): ServiceConfig {
+    // TODO: merge fails with different debug types
     return plainToClassFromExist(this, other_config);
   }
 }

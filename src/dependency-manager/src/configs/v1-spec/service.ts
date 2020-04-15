@@ -1,276 +1,173 @@
-import { plainToClass } from 'class-transformer';
-import { Transform, Type } from 'class-transformer/decorators';
-import { ParameterValue } from '../../manager';
-import { Dict } from '../../utils/transform';
-import { ServiceApiSpec, ServiceConfig, ServiceDatastore, ServiceDebugOptions, ServiceEventNotifications, ServiceEventSubscriptions, ServiceInterfaceSpec, ServiceParameter, VolumeSpec } from '../service';
+import { plainToClass, Type } from 'class-transformer';
+import { IsBoolean, IsNumber, IsOptional, IsString, ValidateIf, ValidateNested } from 'class-validator';
+import { ConditionalType } from '../../utils/transform';
+import { DatastoreValueFromParameter, ServiceDatastore, ServiceParameter, ValueFromParameter } from '../service';
+import { SharedServiceSpecV1, ValueFromParameterSpecV1 } from './shared';
 
-function transformParameters(input: any) {
-  const output: any = {};
-  for (const [key, value] of Object.entries(input)) {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-    // @ts-ignore
-    if (value instanceof Object && !value.valueFrom) {
-      output[key] = value;
-    } else {
-      output[key] = { default: value };
-    }
+class ParameterDefaultSpecV1 {
+  @ValidateNested()
+  @IsOptional()
+  @Type(() => ValueFromParameterSpecV1)
+  value_from?: ValueFromParameterSpecV1;
+
+  @ValidateIf(obj => !obj.value_from)
+  @ValidateNested()
+  @Type(() => ValueFromParameterSpecV1)
+  valueFrom?: ValueFromParameterSpecV1;
+
+  getValueFrom() {
+    return this.value_from || this.valueFrom;
   }
-  return output;
 }
 
-function transformVolumes(input: any) {
-  const output: any = {};
-  for (const [key, value] of Object.entries(input)) {
-    if (value instanceof Object) {
-      output[key] = value;
-    } else {
-      output[key] = { host_path: value };
-    }
-  }
-  return output;
-}
-
-interface ServiceNotificationsV1 {
-  [notification_name: string]: {
-    description: string;
-  };
-}
-
-interface ServiceSubscriptionsV1 {
-  [service_name: string]: {
-    [event_name: string]: {
-      uri: string;
-      headers?: { [key: string]: string };
-    };
-  };
-}
-
-class ServiceDatastoreV1 {
-  host?: string;
-  port?: number;
-  image?: string;
-  @Transform(value => (transformParameters(value)))
-  parameters: { [key: string]: ServiceParameterV1 } = {};
-}
-
-interface ServiceParameterV1 {
+class ParameterSpecV1 {
+  @IsString()
+  @IsOptional()
   description?: string;
-  default?: ParameterValue;
+
+  @IsOptional()
+  @ValidateNested()
+  @ConditionalType([
+    {
+      matches: value => typeof value === 'string',
+      type: String,
+    },
+    {
+      matches: value => typeof value === 'number',
+      type: Number,
+    },
+    {
+      matches: value => typeof value === 'object',
+      type: ParameterDefaultSpecV1,
+    },
+  ])
+  default?: string | number | ParameterDefaultSpecV1;
+
+  @ValidateIf(obj => !obj.default)
+  @ValidateNested()
+  @IsOptional()
+  @Type(() => ValueFromParameterSpecV1)
+  value_from?: ValueFromParameterSpecV1;
+
+  @ValidateIf(obj => !obj.value_from)
+  @Type(() => ValueFromParameterSpecV1)
+  valueFrom?: ValueFromParameterSpecV1;
+
+  @IsOptional()
+  @IsBoolean()
   required?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
   build_arg?: boolean;
+
+  getNormalized(): ServiceParameter {
+    const res: ServiceParameter = {
+      description: this.description || '',
+      required: this.required !== false && !('default' in this),
+    };
+
+    if (this.default && !(this.default instanceof ParameterDefaultSpecV1)) {
+      res.default = this.default;
+    } else if (this.default || this.value_from || this.valueFrom) {
+      const valueFrom = this.default instanceof ParameterDefaultSpecV1
+        ? this.default.getValueFrom()
+        : this.value_from || this.valueFrom;
+
+      // Weird typescript hack - seems to want every valueFrom to have a datastore
+      // ref unless I assign res.default to a more specific type
+      if (valueFrom?.datastore) {
+        res.default = {
+          valueFrom: valueFrom,
+        } as DatastoreValueFromParameter;
+      } else if (valueFrom) {
+        res.default = {
+          valueFrom,
+        } as ValueFromParameter;
+      }
+    }
+
+    if (this.build_arg) {
+      res.build_arg = this.build_arg;
+    }
+
+    return res;
+  }
 }
 
-class LivenessProbeV1 {
-  success_threshold?: number;
-  failure_threshold?: number;
-  timeout?: string;
-  path?: string;
-  interval?: string;
-}
-
-class ApiSpecV1 {
-  type = 'rest';
-  definitions?: string[];
-  @Transform(value => ({ path: '/', success_threshold: 1, failure_threshold: 1, timeout: '5s', interval: '30s', ...value }))
-  liveness_probe?: LivenessProbeV1;
-}
-
-class InterfaceSpecV1 {
-  description?: string;
-  host?: string;
+class DatastoreSpecV1 {
+  @IsNumber()
   port!: number;
+
+  @IsString()
+  image!: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ParameterSpecV1)
+  parameters?: Map<string, ParameterSpecV1>;
 }
 
-export class ServiceVolumeV1 {
-  mount_path?: string;
-  host_path?: string;
-  description?: string;
-  readonly?: boolean;
-}
+export class ServiceSpecV1 extends SharedServiceSpecV1 {
+  @IsString()
+  name!: string;
 
-class ServiceDebugOptionsV1 {
-  path?: string;
-  dockerfile?: string;
-  @Transform(value => (transformVolumes(value)))
-  volumes?: { [s: string]: ServiceVolumeV1 };
-  command?: string | string[];
-  entrypoint?: string | string[];
-}
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ParameterSpecV1)
+  parameters?: Map<string, ParameterSpecV1>;
 
-interface IngressSpecV1 {
-  subdomain: string;
-}
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => DatastoreSpecV1)
+  datastores?: Map<string, DatastoreSpecV1>;
 
-export class ServiceSpecV1 extends ServiceConfig {
-  __version = '1.0.0';
-  name?: string;
-  description?: string;
-  keywords?: string[];
-  image?: string;
-  host?: string;
-  port?: string;
-  command?: string | string[];
-  entrypoint?: string | string[];
-  dockerfile?: string;
-  dependencies: { [s: string]: string } = {};
-  language?: string;
-  @Transform(value => (value instanceof Object ? plainToClass(ServiceDebugOptionsV1, value) : (value ? { command: value } : value)), { toClassOnly: true })
-  debug?: ServiceDebugOptionsV1;
-  @Transform(value => (transformParameters(value)))
-  parameters: { [s: string]: ServiceParameterV1 } = {};
-  @Transform(Dict(() => ServiceDatastoreV1), { toClassOnly: true })
-  datastores: { [s: string]: ServiceDatastoreV1 } = {};
-  @Type(() => ApiSpecV1)
-  api?: ApiSpecV1;
-  interfaces: { [s: string]: InterfaceSpecV1 } = {};
-  notifications: ServiceNotificationsV1 = {};
-  subscriptions: ServiceSubscriptionsV1 = {};
-  platforms: { [s: string]: any } = {};
-  @Transform(value => (transformVolumes(value)))
-  volumes: { [s: string]: ServiceVolumeV1 } = {};
-  ingress?: IngressSpecV1;
-  replicas?: number;
-
-  private normalizeParameters(parameters: { [s: string]: ServiceParameterV1 }): { [s: string]: ServiceParameter } {
-    return Object.keys(parameters).reduce((res: { [s: string]: ServiceParameter }, key: string) => {
-      const param = parameters[key];
-      res[key] = {
-        default: param.default,
-        required: param.required !== false && !('default' in param),
-        description: param.description || '',
-        build_arg: param.build_arg,
-      };
-      return res;
-    }, {});
+  getName() {
+    return this.name || super.getName();
   }
 
-  getName(): string {
-    return this.name || '';
+  getParameters() {
+    return SharedServiceSpecV1.normalizeParameters(
+      item => item.getNormalized(),
+      this.parameters,
+    );
   }
 
-  getApiSpec(): ServiceApiSpec {
-    return this.api || { type: 'rest' };
+  setParameter(key: string, value: string | number) {
+    this.parameters?.set(key, plainToClass(ParameterSpecV1, {
+      default: value,
+    }));
   }
 
-  getInterfaces(): { [name: string]: ServiceInterfaceSpec } {
-    const _default = this.port ? parseInt(this.port) : 8080;
-    return Object.keys(this.interfaces).length ? this.interfaces : { _default: { host: this.host, port: _default } };
-  }
+  getDatastores() {
+    const res = {} as { [s: string]: ServiceDatastore };
 
-  getImage(): string {
-    return this.image || '';
-  }
-
-  getCommand() {
-    return this.command || '';
-  }
-
-  getEntrypoint() {
-    return this.entrypoint || '';
-  }
-
-  getDockerfile() {
-    return this.dockerfile;
-  }
-
-  getDependencies(): { [s: string]: string } {
-    return this.dependencies || {};
-  }
-
-  addDependency(name: string, tag: string) {
-    this.dependencies[name] = tag;
-  }
-
-  removeDependency(dependency_name: string) {
-    delete this.dependencies[dependency_name];
-  }
-
-  getParameters(): { [s: string]: ServiceParameter } {
-    return this.normalizeParameters(this.parameters);
-  }
-
-  getDatastores(): { [s: string]: ServiceDatastore } {
-    return Object.keys(this.datastores)
-      .reduce((res: { [s: string]: ServiceDatastore }, key: string) => {
-        const ds_config = this.datastores[key];
-        if (ds_config.image) {
-          if (!ds_config.port) {
-            throw new Error('Missing datastore port which is required for provisioning');
-          }
-
-          res[key] = {
-            ...ds_config,
-            parameters: this.normalizeParameters(ds_config.parameters || {}),
-          };
-          return res;
+    this.datastores?.forEach((value, key) => {
+      if (value.image) {
+        if (!value.port) {
+          throw new Error('Missing datastore port which is required for provisioning');
         }
 
-        throw new Error('Missing datastore docker config which is required for provisioning');
-      }, {});
-  }
-
-  getNotifications(): ServiceEventNotifications {
-    return this.notifications;
-  }
-
-  getSubscriptions(): ServiceEventSubscriptions {
-    return Object.keys(this.subscriptions)
-      .reduce((res: ServiceEventSubscriptions, service_name: string) => {
-        const events = this.subscriptions[service_name];
-        Object.keys(events).forEach(event_name => {
-          if (!res[service_name]) {
-            res[service_name] = {};
-          }
-
-          res[service_name][event_name] = {
-            type: 'rest',
-            data: {
-              uri: events[event_name].uri,
-              headers: events[event_name].headers,
-            },
-          };
-        });
-        return res;
-      }, {});
-  }
-
-  getDebugOptions(): ServiceDebugOptions | undefined {
-    return this.debug;
-  }
-
-  getLanguage(): string {
-    if (!this.language) {
-      throw new Error(`Missing language for service, ${this.name}`);
-    }
-
-    return this.language;
-  }
-
-  getPlatforms(): { [s: string]: any } {
-    return this.platforms;
-  }
-
-  getPort(): number | undefined {
-    return this.port ? Number(this.port) : undefined;
-  }
-
-  getVolumes(): { [s: string]: VolumeSpec } {
-    return Object.entries(this.volumes).reduce((volumes, [key, entry]) => {
-      if (entry.readonly !== true && entry.readonly !== false) {
-        // Set readonly to false by default
-        entry.readonly = false;
+        res[key] = {
+          ...value,
+          parameters: SharedServiceSpecV1.normalizeParameters(
+            item => item.getNormalized(),
+            value.parameters
+          ),
+        };
       }
+    });
 
-      volumes[key] = entry as VolumeSpec;
-      return volumes;
-    }, {} as { [key: string]: VolumeSpec });
+    return res;
   }
 
-  getIngress() {
-    return this.ingress;
-  }
-
-  getReplicas() {
-    return this.replicas || 1;
+  setDatastoreParameter(datastore: string, param_key: string, param_value: string) {
+    const config = this.datastores?.get(datastore);
+    if (config) {
+      config?.parameters?.set(param_key, plainToClass(ParameterSpecV1, {
+        default: param_value,
+      }));
+      this.datastores?.set(datastore, config);
+    }
   }
 }

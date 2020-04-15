@@ -1,4 +1,4 @@
-import { plainToClass, Transform } from 'class-transformer';
+import { plainToClass, Transform, Type, TypeHelpOptions } from 'class-transformer';
 
 /**
  * Used in conjunction with the @Transform annotation from the 'class-transformer'
@@ -24,3 +24,26 @@ export const Dict = (typeFunction: any, options?: { key?: string }) =>
  */
 export const Default = (defaultValue: any) =>
   Transform((target: any) => target || defaultValue);
+
+interface ConditionalType {
+  matches: (value: any) => boolean;
+  type: new() => any;
+}
+
+/**
+ * Conditional type annotation used for properties that map to different
+ * types based on their structure
+ */
+export const ConditionalType = (types: ConditionalType[]) =>
+  Type((options?: TypeHelpOptions) => {
+    if (options?.object) {
+      const value = (options.object as any)[options.property];
+      for (const condition of types) {
+        if (condition.matches(value)) {
+          return condition.type;
+        }
+      }
+    }
+
+    throw new Error(`Field doesn't match any type conditions: ${options?.property}`);
+  });

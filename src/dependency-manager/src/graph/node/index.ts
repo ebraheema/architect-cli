@@ -1,5 +1,5 @@
 import { Exclude, Type } from 'class-transformer';
-import { ParameterValue } from '../../manager';
+import { ParameterValue } from '../..';
 import { DependencyState } from '../state';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
