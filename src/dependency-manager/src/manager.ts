@@ -3,6 +3,7 @@ import { ServiceNode } from '.';
 import { EnvironmentConfig } from './configs/environment';
 import { EnvironmentConfigBuilder } from './configs/environment.builder';
 import { DatastoreValueFromParameter, ServiceConfig, ValueFromParameter, VaultParameter } from './configs/service';
+import { ServiceConfigBuilder } from './configs/service.builder';
 import DependencyGraph from './graph';
 import NotificationEdge from './graph/edge/notification';
 import ServiceEdge from './graph/edge/service';
@@ -26,33 +27,23 @@ export default abstract class DependencyManager {
   }
 
   getNodeConfig(service_config: ServiceConfig, tag: string) {
-    const node_config = service_config.copy();
+    const env_service_config = this._environment.getServiceDetails(`${service_config.getName()}:${tag}`) || this._environment.getServiceDetails(service_config.getName());
+
+    // Merge the service spec with the environment config options
+    const node_config = ServiceConfigBuilder.merge(
+      env_service_config || ServiceConfigBuilder.createEnvironmentServiceConfig(),
+      service_config,
+    );
 
     // Merge in global parameters from environment config
     const global_parameters = this._environment.getParameters();
     for (const key of Object.keys(node_config.getParameters())) {
       if (key in global_parameters) {
-        node_config.setParameter(key, global_parameters[key]);
+        node_config.setParameter(key, {
+          required: false,
+          default: global_parameters[key],
+        });
       }
-    }
-
-    // Merge in datastore parameter values from environment config
-    for (const [datastore_name, datastore] of Object.entries(node_config.getDatastores())) {
-      for (const key of Object.keys(datastore.parameters)) {
-        if (key in global_parameters) {
-          node_config.setDatastoreParameter(datastore_name, key, global_parameters[key]);
-        }
-      }
-    }
-
-    // Merge in service-specific parameter overrides
-    const env_service = this._environment.getServiceDetails(`${service_config.getName()}:${tag}`) || this._environment.getServiceDetails(service_config.getName());
-    if (env_service) {
-      Object.entries(env_service.getParameters()).forEach(([key, value]) => {
-        if (value.default) {
-          node_config.setParameter(key, value.default);
-        }
-      });
     }
 
     // If debug is enabled merge in debug options ex. debug.command -> command

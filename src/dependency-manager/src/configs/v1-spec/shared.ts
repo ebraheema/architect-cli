@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { Type } from 'class-transformer';
+import { plainToClass, Type } from 'class-transformer';
 import { IsBoolean, IsEnum, IsNumber, IsNumberString, IsOptional, IsString, ValidateIf, ValidateNested } from 'class-validator';
+import { ConditionalType } from '../../utils/transform';
 import { ServiceApiSpec, ServiceConfig, ServiceParameter, VolumeSpec } from '../service';
 
 export const mapToObject = (map?: Map<string, any>, recursive = true) => {
@@ -24,6 +25,10 @@ class VolumeSpecV1 {
   @IsOptional()
   mount_path?: string;
 
+  @IsString()
+  @IsOptional()
+  host_path?: string;
+
   @IsBoolean()
   @IsOptional()
   readonly?: boolean;
@@ -33,6 +38,10 @@ class DebugVolumeSpecV1 extends VolumeSpecV1 {
   @IsString()
   @IsOptional()
   host_path?: string;
+
+  @IsString()
+  @IsOptional()
+  mount_path?: string;
 }
 
 class DebugSpecV1 {
@@ -49,7 +58,17 @@ class DebugSpecV1 {
 
   @IsOptional()
   @ValidateNested()
-  volumes?: Map<string, DebugVolumeSpecV1>;
+  @ConditionalType([
+    {
+      matches: value => typeof value === 'string',
+      type: String,
+    },
+    {
+      matches: value => typeof value === 'object',
+      type: DebugVolumeSpecV1,
+    },
+  ])
+  volumes?: Map<string, string | DebugVolumeSpecV1>;
 }
 
 class LivenessProbeSpecV1 {
@@ -302,7 +321,15 @@ export abstract class SharedServiceSpecV1 extends ServiceConfig {
       case 'object':
         return {
           ...this.debug,
-          volumes: mapToObject(this.debug.volumes),
+          volumes: Object.entries(mapToObject(this.debug.volumes)).reduce((previous, [key, value]) => {
+            if (typeof value === 'string') {
+              previous[key] = { host_path: value };
+            } else {
+              previous[key] = value;
+            }
+
+            return previous;
+          }, {} as { [s: string]: VolumeSpec }),
         };
       case 'string':
         return { command: this.debug };
@@ -326,6 +353,6 @@ export abstract class SharedServiceSpecV1 extends ServiceConfig {
   }
 
   setVolume(key: string, volume: VolumeSpec) {
-    this.volumes?.set(key, volume);
+    this.volumes?.set(key, plainToClass(VolumeSpecV1, volume));
   }
 }

@@ -1,4 +1,4 @@
-import { classToClass, plainToClassFromExist } from 'class-transformer';
+import { classToClass } from 'class-transformer';
 
 export interface VaultParameter {
   valueFrom: {
@@ -30,7 +30,7 @@ interface RestSubscriptionData {
 }
 
 export interface ServiceParameter {
-  description: string;
+  description?: string;
   default?: ParameterValue;
   required: boolean;
   build_arg?: boolean;
@@ -38,8 +38,8 @@ export interface ServiceParameter {
 
 export interface ServiceDatastore {
   host?: string;
-  port?: number;
-  image?: string;
+  port: number;
+  image: string;
   parameters: {
     [key: string]: ServiceParameter;
   };
@@ -101,6 +101,7 @@ export interface IngressSpec {
 
 export abstract class ServiceConfig {
   abstract __version: string;
+  abstract getName(): string;
   abstract getLanguage(): string;
   abstract getImage(): string;
   abstract getCommand(): string | string[];
@@ -111,9 +112,9 @@ export abstract class ServiceConfig {
   abstract setDockerfile(dockerfile?: string): void;
   abstract getDependencies(): { [s: string]: string };
   abstract getParameters(): { [s: string]: ServiceParameter };
-  abstract setParameter(key: string, value: ParameterValue): void;
+  abstract setParameter(key: string, value: string | number | ServiceParameter): void;
   abstract getDatastores(): { [s: string]: ServiceDatastore };
-  abstract setDatastoreParameter(datastore: string, param_key: string, param_value: ParameterValue): void;
+  abstract setDatastore(key: string, datastore: ServiceDatastore): void;
   abstract getApiSpec(): ServiceApiSpec;
   abstract getInterfaces(): { [s: string]: ServiceInterfaceSpec };
   abstract getNotifications(): ServiceEventNotifications;
@@ -126,10 +127,6 @@ export abstract class ServiceConfig {
   abstract getVolumes(): { [s: string]: VolumeSpec };
   abstract setVolume(key: string, volume: VolumeSpec): void;
 
-  getName(): string {
-    return '';
-  }
-
   getIngress(): IngressSpec | undefined {
     return undefined;
   }
@@ -140,10 +137,5 @@ export abstract class ServiceConfig {
 
   copy() {
     return classToClass(this);
-  }
-
-  merge(other_config: ServiceConfig): ServiceConfig {
-    // TODO: merge fails with different debug types
-    return plainToClassFromExist(this, other_config);
   }
 }

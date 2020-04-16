@@ -23,7 +23,6 @@ describe('manager', function () {
     const manager = await LocalDependencyManager.createFromPath(axios.create(), calculator_env_config_path);
     const serialized_graph = serialize(manager.graph);
     graph = deserialize(LocalDependencyGraph, serialized_graph);
-    console.log(graph.nodes[0]);
   });
 
   afterEach(function () {

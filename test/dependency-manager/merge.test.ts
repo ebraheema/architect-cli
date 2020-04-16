@@ -110,7 +110,7 @@ describe('service config merge', function () {
     const service_config = ServiceConfigBuilder.buildFromJSON(service_config_json);
     const env_config = ServiceConfigBuilder.buildFromJSON(env_config_json);
 
-    const node_config = service_config.merge(env_config);
+    const node_config = ServiceConfigBuilder.merge(env_config, service_config);
 
     expect(node_config.getName()).eq('foo/service');
 

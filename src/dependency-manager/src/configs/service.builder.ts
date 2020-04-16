@@ -1,9 +1,10 @@
 /* eslint-disable no-empty */
-import { plainToClass } from 'class-transformer';
+import { plainToClass, plainToClassFromExist } from 'class-transformer';
 import fs from 'fs-extra';
 import yaml from 'js-yaml';
 import path from 'path';
 import { ServiceConfig } from './service';
+import { EnvironmentServiceSpecV1 } from './v1-spec/environment';
 import { ServiceSpecV1 } from './v1-spec/service';
 
 class MissingConfigFileError extends Error {
@@ -78,5 +79,17 @@ export class ServiceConfigBuilder {
     }
 
     throw new Error(`Cannot save config to invalid path: ${input}`);
+  }
+
+  static createServiceConfig() {
+    return new ServiceSpecV1();
+  }
+
+  static createEnvironmentServiceConfig() {
+    return new EnvironmentServiceSpecV1();
+  }
+
+  static merge(target: ServiceConfig, source: ServiceConfig) {
+    return plainToClassFromExist(target, source);
   }
 }

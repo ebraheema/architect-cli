@@ -115,7 +115,7 @@ export class ServiceSpecV1 extends SharedServiceSpecV1 {
   @IsOptional()
   @ValidateNested()
   @Type(() => ParameterSpecV1)
-  parameters?: Map<string, ParameterSpecV1>;
+  parameters?: Map<string, string | ParameterSpecV1>;
 
   @IsOptional()
   @ValidateNested()
@@ -123,18 +123,22 @@ export class ServiceSpecV1 extends SharedServiceSpecV1 {
   datastores?: Map<string, DatastoreSpecV1>;
 
   getName() {
-    return this.name || super.getName();
+    return this.name;
   }
 
   getParameters() {
     return SharedServiceSpecV1.normalizeParameters(
-      item => item.getNormalized(),
+      item => typeof item === 'object' ? item.getNormalized() : { default: item, required: false },
       this.parameters,
     );
   }
 
-  setParameter(key: string, value: string | number) {
-    this.parameters?.set(key, plainToClass(ParameterSpecV1, {
+  setParameter(key: string, value: string | number | ServiceParameter) {
+    if (!this.parameters) {
+      this.parameters = new Map();
+    }
+
+    this.parameters.set(key, plainToClass(ParameterSpecV1, {
       default: value,
     }));
   }
@@ -161,10 +165,31 @@ export class ServiceSpecV1 extends SharedServiceSpecV1 {
     return res;
   }
 
-  setDatastoreParameter(datastore: string, param_key: string, param_value: string) {
+  setDatastore(key: string, value: ServiceDatastore) {
+    if (!this.datastores) {
+      this.datastores = new Map();
+    }
+
+    const newValue = new DatastoreSpecV1();
+    newValue.image = value.image;
+    newValue.port = value.port;
+    newValue.parameters = new Map();
+    this.datastores.set(key, newValue);
+
+
+    Object.entries(value.parameters).forEach(([param_key, param_value]) => {
+      this.setDatastoreParameter(key, param_key, param_value);
+    });
+  }
+
+  setDatastoreParameter(datastore: string, param_key: string, param_value: string | ServiceParameter) {
     const config = this.datastores?.get(datastore);
     if (config) {
-      config?.parameters?.set(param_key, plainToClass(ParameterSpecV1, {
+      if (!config.parameters) {
+        config.parameters = new Map();
+      }
+
+      config.parameters.set(param_key, plainToClass(ParameterSpecV1, {
         default: param_value,
       }));
       this.datastores?.set(datastore, config);

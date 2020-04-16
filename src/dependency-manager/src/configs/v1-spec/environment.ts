@@ -1,8 +1,8 @@
-import { Type } from 'class-transformer';
+import { plainToClass, Type } from 'class-transformer';
 import { IsEnum, IsNumber, IsOptional, IsString, ValidateIf, ValidateNested } from 'class-validator';
 import { ConditionalType } from '../../utils/transform';
 import { EnvironmentConfig } from '../environment';
-import { ParameterValue } from '../service';
+import { ServiceDatastore, ServiceParameter } from '../service';
 import { mapToObject, SharedServiceSpecV1, ValueFromParameterSpecV1, VaultValueFromSpecV1 } from './shared';
 
 class IngressSpecV1 {
@@ -95,7 +95,11 @@ class DnsConfigSpecV1 {
   searches?: string | string[];
 }
 
-class EnvironmentServiceSpecV1 extends SharedServiceSpecV1 {
+export class EnvironmentServiceSpecV1 extends SharedServiceSpecV1 {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
   @IsOptional()
   @ValidateNested()
   @Type(() => IngressSpecV1)
@@ -124,6 +128,10 @@ class EnvironmentServiceSpecV1 extends SharedServiceSpecV1 {
   @Type(() => EnvironmentDatastoreSpecV1)
   datastores?: Map<string, EnvironmentDatastoreSpecV1>;
 
+  getName() {
+    return this.name || '';
+  }
+
   getReplicas() {
     return this.replicas || super.getReplicas();
   }
@@ -136,18 +144,38 @@ class EnvironmentServiceSpecV1 extends SharedServiceSpecV1 {
     return mapToObject(this.parameters);
   }
 
-  setParameter(key: string, value: string) {
-    this.parameters?.set(key, value);
+  setParameter(key: string, value: string | number | ServiceParameter) {
+    this.parameters?.set(key, plainToClass(EnvironmentParameterSpecV1, {
+      default: value,
+    }));
   }
 
   getDatastores() {
     return mapToObject(this.datastores);
   }
 
-  setDatastoreParameter(datastore: string, param_key: string, param_value: ParameterValue) {
+  setDatastore(key: string, value: ServiceDatastore) {
+    if (!this.datastores) {
+      this.datastores = new Map();
+    }
+
+    const newValue = new EnvironmentDatastoreSpecV1();
+    newValue.image = value.image;
+    newValue.port = value.port;
+    newValue.parameters = new Map();
+    this.datastores.set(key, newValue);
+
+    Object.entries(value.parameters).forEach(([param_key, param_value]) => {
+      this.setDatastoreParameter(key, param_key, param_value);
+    });
+  }
+
+  setDatastoreParameter(datastore: string, param_key: string, param_value: string | ServiceParameter) {
     const config = this.datastores?.get(datastore);
     if (config) {
-      config.parameters?.set(param_key, param_value);
+      config.parameters?.set(param_key, plainToClass(EnvironmentParameterSpecV1, {
+        default: param_value,
+      }));
       this.datastores?.set(datastore, config);
     }
   }
