@@ -1,0 +1,179 @@
+{
+  "version": "3",
+  "services": {
+    "davidthor.ory-oauth-stack.kratos-db.latest": {
+      "ports": [
+        "50000:5432"
+      ],
+      "depends_on": [],
+      "environment": {
+        "POSTGRES_USER": "dbuser",
+        "POSTGRES_PASSWORD": "secret",
+        "POSTGRES_DB": "kratos"
+      },
+      "image": "postgres:9.6"
+    },
+    "davidthor.ory-oauth-stack.hydra-db.latest": {
+      "ports": [
+        "50001:5432"
+      ],
+      "depends_on": [],
+      "environment": {
+        "POSTGRES_USER": "dbuser",
+        "POSTGRES_PASSWORD": "secret",
+        "POSTGRES_DB": "hydra"
+      },
+      "image": "postgres:9.6"
+    },
+    "davidthor.ory-oauth-stack.mailslurper.latest": {
+      "ports": [
+        "50002:1025"
+      ],
+      "depends_on": [],
+      "environment": {},
+      "image": "oryd/mailslurper:latest-smtps"
+    },
+    "davidthor.ory-oauth-stack.kratos.latest": {
+      "ports": [
+        "50003:4433",
+        "50004:4434"
+      ],
+      "depends_on": [
+        "davidthor.ory-oauth-stack.kratos-db.latest",
+        "davidthor.ory-oauth-stack.mailslurper.latest"
+      ],
+      "environment": {
+        "DSN": "postgres://dbuser:secret@davidthor.ory-oauth-stack.kratos-db.latest:5432/kratos?sslmode=disable&max_conns=20&max_idle_conns=4",
+        "SECRETS_SESSION": "youReallyNeedToChangeThis",
+        "COURIER_SMTP_CONNECTION_URI": "smtps://test:test@davidthor.ory-oauth-stack.mailslurper.latest:1025/?skip_ssl_verify=true",
+        "SELFSERVICE_VERIFY_RETURN_TO": "http://auth.localhost:80",
+        "SELFSERVICE_LOGOUT_REDIRECT_TO": "http://auth.localhost:80/login",
+        "URLS_LOGIN_UI": "http://auth.localhost:80/login",
+        "URLS_REGISTRATION_UI": "http://auth.localhost:80/registration",
+        "URLS_ERROR_UI": "http://auth.localhost:80/error",
+        "URLS_SETTINGS_UI": "http://auth.localhost:80/settings",
+        "URLS_VERIFY_UI": "http://auth.localhost:80/verify",
+        "URLS_MFA_UI": "http://auth.localhost:80",
+        "URLS_SELF_PUBLIC": "http://auth.localhost:80/.kratos/",
+        "URLS_SELF_ADMIN": "http://davidthor.ory-oauth-stack.kratos.latest:4434",
+        "URLS_DEFAULT_RETURN_TO": "http://auth.localhost:80",
+        "URLS_WHITELISTED_RETURN_TO_URLS": "http://auth.localhost:80"
+      },
+      "command": [
+        "sh",
+        "-c",
+        "kratos migrate sql -e --yes ;\nkratos serve -c /etc/config/kratos/.kratos.yaml --dev\n"
+      ],
+      "build": {
+        "context": "/Users/davidthor/Workspaces/Architect/ory-kratos-test/ory-oauth-stack/kratos"
+      }
+    },
+    "davidthor.ory-oauth-stack.hydra.latest": {
+      "ports": [
+        "50005:4444",
+        "50006:4445"
+      ],
+      "depends_on": [
+        "davidthor.ory-oauth-stack.hydra-db.latest",
+        "gateway"
+      ],
+      "environment": {
+        "URLS_SELF_ISSUER": "http://auth.localhost:80",
+        "URLS_CONSENT": "http://auth.localhost:80/consent",
+        "URLS_LOGIN": "http://auth.localhost:80/login",
+        "URLS_LOGOUT": "http://auth.localhost:80/logout",
+        "DSN": "postgres://dbuser:secret@davidthor.ory-oauth-stack.hydra-db.latest:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4\n",
+        "SECRETS_SYSTEM": "youReallyNeedToChangeThis",
+        "OIDC_SUBJECT_IDENTIFIERS_SUPPORTED_TYPES": "public,pairwise",
+        "OIDC_SUBJECT_IDENTIFIERS_PAIRWISE_SALT": "youReallyNeedToChangeThis",
+        "SERVE_PUBLIC_CORS_ENABLED": "true",
+        "SERVE_PUBLIC_CORS_ALLOWED_ORIGINS": "*",
+        "SERVE_PUBLIC_CORS_DEBUG": "true",
+        "VIRTUAL_HOST": "hydra-admin.localhost",
+        "VIRTUAL_PORT": "4445",
+        "VIRTUAL_PROTOCOL": "http"
+      },
+      "image": "oryd/hydra:v1.5-alpine",
+      "command": [
+        "sh",
+        "-c",
+        "hydra migrate sql -e --yes ;\nhydra serve all --dangerous-force-http\n"
+      ],
+      "entrypoint": [
+        ""
+      ],
+      "restart": "always"
+    },
+    "davidthor.ory-oauth-stack.frontend.latest": {
+      "ports": [
+        "50007:3000"
+      ],
+      "depends_on": [
+        "davidthor.ory-oauth-stack.kratos.latest",
+        "davidthor.ory-oauth-stack.hydra.latest",
+        "gateway"
+      ],
+      "environment": {
+        "KRATOS_ADMIN_URL": "http://davidthor.ory-oauth-stack.kratos.latest:4434",
+        "KRATOS_PUBLIC_URL": "http://davidthor.ory-oauth-stack.kratos.latest:4433",
+        "HYDRA_ADMIN_URL": "http://davidthor.ory-oauth-stack.hydra.latest:4445",
+        "HYDRA_PUBLIC_URL": "http://davidthor.ory-oauth-stack.hydra.latest:4444",
+        "VIRTUAL_HOST": "auth.localhost",
+        "VIRTUAL_PORT": "3000",
+        "VIRTUAL_PROTOCOL": "http"
+      },
+      "build": {
+        "context": "/Users/davidthor/Workspaces/Architect/ory-kratos-test/ory-oauth-stack/frontend",
+        "dockerfile": "Dockerfile.debug"
+      },
+      "volumes": [
+        "/Users/davidthor/Workspaces/Architect/ory-kratos-test/ory-oauth-stack/frontend/src:/usr/src/app/src/",
+        "/Users/davidthor/Workspaces/Architect/ory-kratos-test/ory-oauth-stack/frontend/views:/usr/src/app/views/"
+      ],
+      "restart": "always"
+    },
+    "davidthor.oauth-client.webapp.latest": {
+      "ports": [
+        "50008:3000"
+      ],
+      "depends_on": [
+        "gateway"
+      ],
+      "environment": {
+        "VIRTUAL_HOST": "app.localhost",
+        "VIRTUAL_PORT": "3000",
+        "VIRTUAL_PROTOCOL": "http"
+      },
+      "build": {
+        "context": "/Users/davidthor/Workspaces/Architect/ory-kratos-test/oauth-client",
+        "dockerfile": "Dockerfile.debug"
+      },
+      "volumes": [
+        "/Users/davidthor/Workspaces/Architect/ory-kratos-test/oauth-client/src:/usr/src/app/src",
+        "/Users/davidthor/Workspaces/Architect/ory-kratos-test/oauth-client/pages:/usr/src/app/pages",
+        "/Users/davidthor/Workspaces/Architect/ory-kratos-test/oauth-client/public:/usr/src/app/public"
+      ],
+      "restart": "always"
+    },
+    "gateway": {
+      "image": "architectio/nginx-proxy:latest",
+      "restart": "always",
+      "ports": [
+        "80:80"
+      ],
+      "volumes": [
+        "/var/run/docker.sock:/tmp/docker.sock:ro"
+      ],
+      "depends_on": [],
+      "environment": {
+        "HTTPS_METHOD": "noredirect",
+        "DISABLE_ACCESS_LOGS": "true",
+        "HTTP_PORT": 80
+      },
+      "logging": {
+        "driver": "none"
+      }
+    }
+  },
+  "volumes": {}
+}

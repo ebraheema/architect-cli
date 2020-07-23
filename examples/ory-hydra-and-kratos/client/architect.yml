@@ -1,0 +1,39 @@
+name: davidthor/oauth-client-example
+description: Example oauth client webapp
+
+parameters:
+  OAUTH_CLIENT_ID:
+    description: Unique ID of the oauth client this application will claim
+    default: my-client-id
+  OAUTH_CLIENT_NAME:
+    description: Friendly name to assign to the claimed OAuth client
+    default: My Client
+
+dependencies:
+  davidthor/ory-oauth-server: latest
+
+services:
+  webapp:
+    build:
+      context: ./
+    interfaces:
+      http: 3000
+    environment:
+      HYDRA_ADMIN_URL: ${ dependencies['davidthor/ory-oauth-server'].interfaces.hydra-admin.url }
+      NEXT_PUBLIC_SELF_URL: ${ interfaces.frontend.url }
+      NEXT_PUBLIC_OAUTH_AUTH_URL: ${ dependencies['davidthor/ory-oauth-server'].interfaces.frontend.url }/oauth2/auth
+      NEXT_PUBLIC_OAUTH_TOKEN_URL: ${ dependencies['davidthor/ory-oauth-server'].interfaces.frontend.url }/oauth2/token
+      NEXT_PUBLIC_OAUTH_LOGOUT_URL: ${ dependencies['davidthor/ory-oauth-server'].interfaces.frontend.url }/oauth2/sessions/logout
+      NEXT_PUBLIC_OAUTH_SCOPES: openid offline
+      NEXT_PUBLIC_OAUTH_CLIENT_ID: ${ parameters.OAUTH_CLIENT_ID }
+      OAUTH_CLIENT_NAME: ${ parameters.OAUTH_CLIENT_NAME }
+    debug:
+      build:
+        dockerfile: Dockerfile.debug
+      volumes:
+        src:
+          mount_path: /usr/src/app/src
+          host_path: ./src/
+
+interfaces:
+  frontend: ${ services.webapp.interfaces.http.url }

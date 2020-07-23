@@ -1,0 +1,7 @@
+interfaces:
+  auth: ${ components['davidthor/ory-oauth-server'].interfaces.frontend.url }
+  app: ${ components['davidthor/oauth-client-example'].interfaces.frontend.url }
+
+components:
+  davidthor/ory-oauth-server: file:./server/
+  davidthor/oauth-client-example: file:./client/

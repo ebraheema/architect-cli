@@ -1,0 +1,3 @@
+#!/bin/sh
+
+echo "$DEFAULT_SCHEMA" > /etc/config/kratos/identity.schema.json

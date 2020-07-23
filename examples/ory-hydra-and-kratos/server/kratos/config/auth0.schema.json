@@ -1,0 +1,35 @@
+{
+  "$id": "http://architect.io/v1/auth0.schema.json ",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "ory.sh/kratos": {
+        "mappings": {
+          "identity": {
+            "traits": [
+              {
+                "path": "email"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "username": {
+      "type": "string",
+      "ory.sh/kratos": {
+        "mappings": {
+          "identity": {
+            "traits": [
+              {
+                "path": "username"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

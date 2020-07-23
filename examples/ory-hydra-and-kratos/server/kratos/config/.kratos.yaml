@@ -1,0 +1,56 @@
+log:
+  level: debug
+
+hashers:
+  argon2:
+    parallelism: 1
+    memory: 131072
+    iterations: 2
+    salt_length: 16
+    key_length: 16
+
+identity:
+  traits:
+    default_schema_url: file:///etc/config/kratos/identity.schema.json
+
+selfservice:
+  strategies:
+    password:
+      enabled: true
+    oidc:
+      enabled: true
+      config:
+        providers:
+          - id: auth0
+            provider: generic
+            mapper_url: file:///etc/config/kratos/auth0.schema.json
+            client_id: 7fP1kHObzTBTPum9rkyfo3T07s56qywJ
+            client_secret: 4zeWowShsRwzt3xx8nK1xDCfXBOsk7CC2SQ_J1YW-Tfo5UIrAP6WLWXQVcI6nRNv
+            scope:
+              - email
+              - profile
+              - openid
+            issuer_url: https://auth.architect.io/
+            auth_url: https://auth.architect.io/authorize
+            token_url: https://auth.architect.io/oauth/token
+
+  settings:
+    privileged_session_max_age: 1m
+    after:
+      profile:
+        hooks:
+          - hook: verify
+
+  login:
+    request_lifespan: 10m
+
+  registration:
+    request_lifespan: 10m
+    after:
+      password:
+        hooks:
+          - hook: session
+          - hook: verify
+      oidc:
+        hooks:
+          - hook: session

@@ -1,0 +1,169 @@
+name: davidthor/ory-oauth-server
+description: A full oauth stack using Ory's Hydra and Kratos services
+
+parameters:
+  LOG_LEVEL: info
+  KRATOS_DB_USER: dbuser
+  KRATOS_DB_PASS: secret
+  KRATOS_DB_NAME: kratos
+  HYDRA_DB_USER: dbuser
+  HYDRA_DB_PASS: secret
+  HYDRA_DB_NAME: hydra
+  SESSION_SECRET: youReallyNeedToChangeThis
+  SYSTEM_SECRET:
+    default: youReallyNeedToChangeThis
+    description: |
+      Used to encrypt sensitive data using AES-GCM (256 bit) andvalidate HMAC
+      signatures. Must be at least 16 characeters long.
+  OIDC_PAIRWISE_SALT:
+    default: youReallyNeedToChangeThis
+
+services:
+  kratos-db:
+    image: postgres:9.6
+    interfaces:
+      postgres:
+        port: 5432
+        protocol: postgres
+    environment:
+      POSTGRES_USER: ${ parameters.KRATOS_DB_USER }
+      POSTGRES_PASSWORD: ${ parameters.KRATOS_DB_PASS }
+      POSTGRES_DB: ${ parameters.KRATOS_DB_NAME }
+  hydra-db:
+    image: postgres:9.6
+    interfaces:
+      postgres:
+        port: 5432
+        protocol: postgres
+    environment:
+      POSTGRES_USER: ${ parameters.HYDRA_DB_USER }
+      POSTGRES_PASSWORD: ${ parameters.HYDRA_DB_PASS }
+      POSTGRES_DB: ${ parameters.HYDRA_DB_NAME }
+  mailslurper:
+    image: oryd/mailslurper:latest-smtps
+    interfaces:
+      smtp:
+        port: 1025
+        protocol: smtps
+  kratos:
+    build:
+      context: ./kratos/
+    command:
+      - sh
+      - -c
+      - |
+        /home/ory/setup
+        kratos migrate sql -e --yes ;
+        kratos serve -c /etc/config/kratos/.kratos.yaml --dev
+    interfaces:
+      public: 4433
+      admin: 4434
+    environment:
+      LOG_LEVEL: ${ parameters.LOG_LEVEL }
+      DSN: ${ services.kratos-db.interfaces.postgres.protocol }://${ parameters.KRATOS_DB_USER }:${ parameters.KRATOS_DB_PASS }@${ services.kratos-db.interfaces.postgres.host }:${ services.kratos-db.interfaces.postgres.port }/${ parameters.KRATOS_DB_NAME }?sslmode=disable&max_conns=20&max_idle_conns=4
+      SECRETS_SESSION: ${ parameters.SESSION_SECRET }
+      COURIER_SMTP_CONNECTION_URI: ${ services.mailslurper.interfaces.smtp.protocol }://test:test@${ services.mailslurper.interfaces.smtp.host }:${ services.mailslurper.interfaces.smtp.port }/?skip_ssl_verify=true
+      SELFSERVICE_VERIFY_RETURN_TO: ${ interfaces.frontend.url }
+      SELFSERVICE_LOGOUT_REDIRECT_TO: ${ interfaces.frontend.url }/login
+      URLS_LOGIN_UI: ${ interfaces.frontend.url }/login
+      URLS_REGISTRATION_UI: ${ interfaces.frontend.url }/registration
+      URLS_ERROR_UI: ${ interfaces.frontend.url }/error
+      URLS_SETTINGS_UI: ${ interfaces.frontend.url }/settings
+      URLS_VERIFY_UI: ${ interfaces.frontend.url }/verify
+      URLS_MFA_UI: ${ interfaces.frontend.url }
+      URLS_SELF_PUBLIC: ${ interfaces.frontend.url }/.kratos/
+      URLS_SELF_ADMIN: ${ services.kratos.interfaces.admin.url }
+      URLS_DEFAULT_RETURN_TO: ${ interfaces.frontend.url }
+      URLS_WHITELISTED_RETURN_TO_URLS: ${ interfaces.frontend.url }
+      DEFAULT_SCHEMA: |
+        {
+          "$id": "https://architect.io/v1/identity.schema.json",
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "User",
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "format": "email",
+              "title": "E-Mail",
+              "minLength": 3,
+              "ory.sh/kratos": {
+                "credentials": {
+                  "password": {
+                    "identifier": true
+                  }
+                },
+                "verification": {
+                  "via": "email"
+                }
+              }
+            },
+            "username": {
+              "type": "string",
+              "title": "Username",
+              "ory.sh/kratos": {
+                "credentials": {
+                  "password": {
+                    "identifier": true
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "email",
+            "username"
+          ],
+          "additionalProperties": false
+        }
+  hydra:
+    image: oryd/hydra:v1.5-alpine
+    entrypoint: [""]
+    command:
+      - sh
+      - -c
+      - |
+        hydra migrate sql -e --yes ;
+        hydra serve all --dangerous-force-http
+    interfaces:
+      public: 4444
+      admin: 4445
+    environment:
+      LOG_LEVEL: ${ parameters.LOG_LEVEL }
+      URLS_SELF_ISSUER: ${ interfaces.frontend.url }
+      URLS_CONSENT: ${ interfaces.frontend.url }/consent
+      URLS_LOGIN: ${ interfaces.frontend.url }/login
+      URLS_LOGOUT: ${ interfaces.frontend.url }/logout
+      DSN: |
+        ${ services.hydra-db.interfaces.postgres.protocol }://${ parameters.HYDRA_DB_USER }:${ parameters.HYDRA_DB_PASS }@${ services.hydra-db.interfaces.postgres.host }:${ services.hydra-db.interfaces.postgres.port }/${ parameters.HYDRA_DB_NAME }?sslmode=disable&max_conns=20&max_idle_conns=4
+      SECRETS_SYSTEM: ${ parameters.SYSTEM_SECRET }
+      OIDC_SUBJECT_IDENTIFIERS_SUPPORTED_TYPES: public,pairwise
+      OIDC_SUBJECT_IDENTIFIERS_PAIRWISE_SALT: ${ parameters.OIDC_PAIRWISE_SALT }
+      SERVE_PUBLIC_CORS_ENABLED: true
+      SERVE_PUBLIC_CORS_ALLOWED_ORIGINS: "*"
+      SERVE_PUBLIC_CORS_DEBUG: true
+  frontend:
+    build:
+      context: ./frontend
+    interfaces:
+      http: 3000
+    environment:
+      KRATOS_ADMIN_URL: ${ services.kratos.interfaces.admin.url }
+      KRATOS_PUBLIC_URL: ${ services.kratos.interfaces.public.url }
+      HYDRA_ADMIN_URL: ${ services.hydra.interfaces.admin.url }
+      HYDRA_PUBLIC_URL: ${ services.hydra.interfaces.public.url }
+    debug:
+      build:
+        dockerfile: Dockerfile.debug
+      volumes:
+        src:
+          host_path: ./frontend/src/
+          mount_path: /usr/src/app/src/
+        views:
+          host_path: ./frontend/views/
+          mount_path: /usr/src/app/views/
+
+interfaces:
+  frontend: ${ services.frontend.interfaces.http.url }
+  hydra-admin: ${ services.hydra.interfaces.admin.url }
+  kratos-admin: ${ services.kratos.interfaces.admin.url }

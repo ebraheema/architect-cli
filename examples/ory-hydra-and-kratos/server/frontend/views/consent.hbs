@@ -1,0 +1,54 @@
+<div class="auth">
+    <div class="container">
+        {{> icon_logo}}
+
+        <div id="consent">
+            <form action="" method="POST">
+                {{> form_input_hidden name="challenge" value=challenge }}
+                {{> form_input_hidden name="_csrf" value=csrfToken }}
+
+                <h4 class="subheading">
+                    Hi {{ user }}, application <strong>{{ client.client_id }}</strong> wants
+                    access to resources on your behalf and to:
+                </h4>
+
+                {{#each requested_scope }}
+                <label for="{{ . }}">
+                    <input type="checkbox" id="{{ . }}" checked value="{{ . }}" name="grant_scope"
+                        style="width: 13px; height: 13px" />
+                    {{ . }}
+                </label>
+                {{/each}}
+
+                <p>
+                    Do you want to be asked next time when this application wants to access your data? The application
+                    will not be able to ask for more permissions without your consent.
+                </p>
+
+                <ul>
+                    {{#if client.policy_uri}}
+                    <li>
+                        <a href="{{ client.policy_uri }}">Policy</a>
+                    </li>
+                    {{/if}}
+
+                    {{#if client.tos_uri}}
+                    <li>
+                        <a href="{{ client.tos_uri }}">Terms of service</a>
+                    </li>
+                    {{/if}}
+                </ul>
+
+                <label for="remember">
+                    <input type="checkbox" id="remember" value="1" name="remember" style="width: 13px; height: 13px" />
+                    Do not ask me again
+                </label>
+
+                <p>
+                    {{> form_field_button type="submit" id="accept" name="submit" value="Allow access" }}
+                    {{> form_field_button type="submit" id="reject" name="submit" value="Deny access" }}
+                </p>
+            </form>
+        </div>
+    </div>
+</div>

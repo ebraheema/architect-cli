@@ -1,0 +1,21 @@
+{
+  "name": "oauth-client",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node ./bin/setup.js && next dev",
+    "build": "next build",
+    "start": "node ./bin/setup.js && next start"
+  },
+  "dependencies": {
+    "@material-ui/core": "^4.11.0",
+    "axios": "^0.19.2",
+    "next": "9.4.4",
+    "react": "16.13.1",
+    "react-dom": "16.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^14.0.14",
+    "typescript": "^3.9.6"
+  }
+}
