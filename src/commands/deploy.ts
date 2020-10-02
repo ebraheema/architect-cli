@@ -17,7 +17,7 @@ import * as DockerCompose from '../common/docker-compose';
 import DockerComposeTemplate from '../common/docker-compose/template';
 import { AccountUtils } from '../common/utils/account';
 import { Environment, EnvironmentUtils } from '../common/utils/environment';
-import { ComponentVersionSlugUtils, EnvironmentConfig } from '../dependency-manager/src';
+import { ComponentConfigBuilder, ComponentVersionSlugUtils, EnvironmentConfig } from '../dependency-manager/src';
 import { EnvironmentConfigBuilder } from '../dependency-manager/src/environment-config/builder';
 import { Dictionary } from '../dependency-manager/src/utils/dictionary';
 
@@ -117,7 +117,7 @@ export default class Deploy extends DeployCommand {
     local: flags.boolean({
       char: 'l',
       description: 'Deploy the stack locally instead of via Architect Cloud',
-      exclusive: ['account', 'environment', 'auto_approve', 'lock', 'force_unlock', 'refresh'],
+      exclusive: ['account', 'auto_approve', 'lock', 'force_unlock', 'refresh'],
     }),
     compose_file: flags.string({
       char: 'o',
@@ -126,7 +126,7 @@ export default class Deploy extends DeployCommand {
         os.tmpdir(),
         `architect-deployment-${Date.now().toString()}.yml`,
       ),
-      exclusive: ['account', 'environment', 'auto_approve', 'lock', 'force_unlock', 'refresh'],
+      exclusive: ['account', 'auto_approve', 'lock', 'force_unlock', 'refresh'],
     }),
     detached: flags.boolean({
       description: 'Run in detached mode',
@@ -158,7 +158,7 @@ export default class Deploy extends DeployCommand {
     required: true,
   }];
 
-  async runCompose(compose: DockerComposeTemplate) {
+  async runCompose(compose: DockerComposeTemplate, environment_name = 'architect') {
     const { flags } = this.parse(Deploy);
 
     const exposed_interfaces: string[] = [];
@@ -184,7 +184,7 @@ export default class Deploy extends DeployCommand {
     await fs.ensureFile(flags.compose_file);
     await fs.writeFile(flags.compose_file, yaml.safeDump(compose));
     this.log(`Wrote docker-compose file to: ${flags.compose_file}`);
-    const compose_args = ['-f', flags.compose_file, 'up', '--build', '--abort-on-container-exit'];
+    const compose_args = ['-p', environment_name, '-f', flags.compose_file, 'up', '--build', '--abort-on-container-exit'];
     if (flags.detached) {
       compose_args.push('-d');
       compose_args.splice(compose_args.indexOf('--abort-on-container-exit'), 1); // cannot be used in detached mode
@@ -233,12 +233,26 @@ export default class Deploy extends DeployCommand {
 
     let dependency_manager;
     if (ComponentVersionSlugUtils.Validator.test(args.environment_config_or_component)) {
+      if (!flags.environment) {
+        throw new Error('Please specify an environment to deploy the component to');
+      }
+
+      const env_config = this.app.getLocalEnvironment(flags.environment);
+      if (!env_config) {
+        throw new Error(`No local environment named ${flags.environment}. Run \`architect env:create --platform local ${flags.environment}\` to create one.`);
+      }
+
       const parsed_component_version = ComponentVersionSlugUtils.parse(args.environment_config_or_component);
-      const env_config = EnvironmentConfigBuilder.buildFromJSON({
-        components: {
-          [parsed_component_version.namespaced_component_name]: parsed_component_version.tag,
-        },
+      const component = ComponentConfigBuilder.buildFromJSON({
+        extends: parsed_component_version.tag,
       });
+
+      const extra_params = this.getExtraEnvironmentVariables(flags.parameter);
+      for (const [parameter_key, parameter] of Object.entries(extra_params)) {
+        component.setParameter(parameter_key, parameter);
+      }
+
+      env_config.setComponent(parsed_component_version.namespaced_component_name, component);
 
       dependency_manager = await LocalDependencyManager.create(this.app.api);
       dependency_manager.environment = env_config;
@@ -252,15 +266,16 @@ export default class Deploy extends DeployCommand {
         this.app.api,
         path.resolve(untildify(args.environment_config_or_component)),
       );
-    }
-    const extra_params = this.getExtraEnvironmentVariables(flags.parameter);
-    for (const [parameter_key, parameter] of Object.entries(extra_params)) {
-      dependency_manager.environment.setParameter(parameter_key, parameter);
+
+      const extra_params = this.getExtraEnvironmentVariables(flags.parameter);
+      for (const [parameter_key, parameter] of Object.entries(extra_params)) {
+        dependency_manager.environment.setParameter(parameter_key, parameter);
+      }
     }
 
     dependency_manager.setLinkedComponents(this.app.linkedComponents);
     const compose = await DockerCompose.generate(dependency_manager);
-    await this.runCompose(compose);
+    await this.runCompose(compose, flags.environment);
   }
 
   protected async runRemote() {

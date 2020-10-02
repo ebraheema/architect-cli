@@ -18,7 +18,10 @@ export class PlatformUtils {
 
   static async getPlatform(api: AxiosInstance, account: Account, platform_name?: string): Promise<Platform> {
     let platform: Platform;
-    if (platform_name) {
+
+    if (platform_name === 'local') {
+      platform = { id: 'local', name: 'local' };
+    } else if (platform_name) {
       platform = (await api.get(`/accounts/${account.id}/platforms/${platform_name}`)).data;
     } else {
       inquirer.registerPrompt('autocomplete', require('inquirer-autocomplete-prompt'));
@@ -47,6 +50,7 @@ export class PlatformUtils {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       platform = platforms.find((platform) => platform.name === answers.platform)!;
     }
+
     return platform;
   }
 }

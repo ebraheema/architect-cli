@@ -33,6 +33,11 @@ export default class EnvironmentDestroy extends Command {
   async run() {
     const { args, flags } = this.parse(EnvironmentDestroy);
 
+    if (!flags.account && await this.destroyLocal(args.environment, flags.auto_approve)) {
+      this.log(chalk.green('Local environment destroyed'));
+      return;
+    }
+
     const account = await AccountUtils.getAccount(this.app.api, flags.account);
     const environment = await EnvironmentUtils.getEnvironment(this.app.api, account, args.environment);
 
@@ -60,5 +65,28 @@ export default class EnvironmentDestroy extends Command {
     });
     cli.action.stop();
     this.log(chalk.green('Environment destroyed'));
+  }
+
+  private async destroyLocal(environment_name: string, auto_approve: boolean): Promise<boolean> {
+    const local_environments = this.app.getAllLocalEnvironments();
+    if (!Object.keys(local_environments).includes(environment_name)) {
+      return false;
+    }
+
+    await inquirer.prompt([{
+      type: 'input',
+      name: 'destroy',
+      message: 'Are you absolutely sure? This will destroy the environment.\nPlease type in the name of the environment to confirm.\n',
+      validate: (value: any, answers: any) => {
+        if (value === environment_name) {
+          return true;
+        }
+        return `Name must match: ${chalk.blue(environment_name)}`;
+      },
+      when: !auto_approve,
+    }]);
+
+    this.app.setLocalEnvironment(environment_name, undefined);
+    return true;
   }
 }

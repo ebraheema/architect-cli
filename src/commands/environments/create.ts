@@ -5,7 +5,7 @@ import inquirer from 'inquirer';
 import Command from '../../base-command';
 import { AccountUtils } from '../../common/utils/account';
 import { PlatformUtils } from '../../common/utils/platform';
-import { Slugs } from '../../dependency-manager/src';
+import { EnvironmentConfigBuilder, Slugs } from '../../dependency-manager/src';
 
 export default class EnvironmentCreate extends Command {
   static aliases = ['environment:create', 'envs:create', 'env:create'];
@@ -44,7 +44,10 @@ export default class EnvironmentCreate extends Command {
     ]);
 
     const environment_name = args.environment || answers.environment;
-    if (!Slugs.ArchitectSlugValidator.test(environment_name)) {
+    if (flags.platform === 'local') {
+      this.createLocal(environment_name);
+      return;
+    } else if (!Slugs.ArchitectSlugValidator.test(environment_name)) {
       throw new Error(`environment ${Slugs.ArchitectSlugDescription}`);
     }
 
@@ -63,5 +66,15 @@ export default class EnvironmentCreate extends Command {
     const environment_url = `${this.app.config.app_host}/${account.name}/environments/${environment_name}`;
     cli.action.stop();
     this.log(chalk.green(`Environment created: ${environment_url}`));
+  }
+
+  private createLocal(environment_name: string) {
+    const environment = this.app.getLocalEnvironment(environment_name);
+    if (environment) {
+      throw new Error(`Local environment named ${environment_name} already exists`);
+    }
+
+    this.app.setLocalEnvironment(environment_name, EnvironmentConfigBuilder.buildFromJSON({}));
+    this.log(chalk.green('Local environment created successfully'));
   }
 }

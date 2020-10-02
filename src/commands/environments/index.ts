@@ -24,12 +24,19 @@ export default class Environments extends Command {
       return;
     }
 
-    const table = new Table({ head: ['Name', 'Account', 'Namespace', 'Created', 'Updated'] });
+    const table = new Table({ head: ['Name', 'Account', 'Created', 'Updated'] });
+    const local_environments = this.app.getAllLocalEnvironments();
+    for (const name of Object.keys(local_environments)) {
+      table.push([name, 'local', 'N/A', 'N/A']);
+    }
+
     for (const env of environments) {
       // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
       // @ts-ignore
-      table.push([env.name, env.account.name, env.namespace, env.created_at, env.updated_at]);
+      table.push([env.name, env.account.name, env.created_at, env.updated_at]);
     }
+
+
 
     this.log(table.toString());
   }

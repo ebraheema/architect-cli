@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
 import LoginRequiredError from '../common/errors/login-required';
+import { EnvironmentConfig, EnvironmentConfigBuilder } from '../dependency-manager/src';
 import { Dictionary } from '../dependency-manager/src/utils/dictionary';
 import ARCHITECTPATHS from '../paths';
 import AuthClient from './auth';
@@ -11,6 +12,7 @@ export default class AppService {
   config: AppConfig;
   auth: AuthClient;
   linkedComponents: Dictionary<string> = {};
+  environments: Dictionary<EnvironmentConfig> = {};
   _api: AxiosInstance;
   version: string;
 
@@ -45,11 +47,42 @@ export default class AppService {
     if (fs.existsSync(linkedComponentsFile)) {
       this.linkedComponents = fs.readJSONSync(linkedComponentsFile) as Dictionary<string>;
     }
+
+    const environmentsFile = path.join(config_dir, ARCHITECTPATHS.ENVIRONMENTS_CONFIG_FILENAME);
+    if (fs.existsSync(environmentsFile)) {
+      const rawContents = fs.readJSONSync(environmentsFile);
+      for (const [environment_name, data] of Object.entries(rawContents)) {
+        this.environments[environment_name] = EnvironmentConfigBuilder.buildFromJSON(data);
+      }
+    }
   }
 
   private saveLinkedComponents() {
     const linkedComponentsFile = path.join(this.config.getConfigDir(), ARCHITECTPATHS.LINKED_COMPONENT_MAP_FILENAME);
     fs.writeJSONSync(linkedComponentsFile, this.linkedComponents);
+  }
+
+  private saveLocalEnvironments() {
+    const environmentsFile = path.join(this.config.getConfigDir(), ARCHITECTPATHS.ENVIRONMENTS_CONFIG_FILENAME);
+    fs.writeJSONSync(environmentsFile, this.environments);
+  }
+
+  getAllLocalEnvironments() {
+    return this.environments;
+  }
+
+  getLocalEnvironment(environment_name: string) {
+    return this.environments[environment_name] || undefined;
+  }
+
+  setLocalEnvironment(environment_name: string, environment?: EnvironmentConfig) {
+    if (!environment) {
+      delete this.environments[environment_name];
+    } else {
+      this.environments[environment_name] = environment;
+    }
+
+    this.saveLocalEnvironments();
   }
 
   linkComponentPath(componentName: string, componentPath: string) {
@@ -82,6 +115,10 @@ export default class AppService {
   unlinkAllComponents() {
     this.linkedComponents = {};
     this.saveLinkedComponents();
+  }
+
+  addComponentToEnvironment(environment_name: string) {
+
   }
 
   saveConfig() {
