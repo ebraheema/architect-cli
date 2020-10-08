@@ -65,6 +65,15 @@ export const generate = async (dependency_manager: LocalDependencyManager): Prom
         ports,
         depends_on: [],
         environment: node.node_config.getEnvironmentVariables(),
+        // @ts-ignore
+        deploy: {
+          resources: {
+            limits: {
+              cpus: '0.5',
+              memory: '2G',
+            },
+          },
+        },
       };
 
       if (gateway_links.length) {
