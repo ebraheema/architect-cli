@@ -69,8 +69,8 @@ export const generate = async (dependency_manager: LocalDependencyManager): Prom
         deploy: {
           resources: {
             limits: {
-              cpus: '0.5',
-              memory: '2G',
+              cpus: '2',
+              memory: '4G',
             },
           },
         },
