@@ -12,6 +12,6 @@
     "cors": "2.8.5",
     "express": "^4.17.1",
     "kafka-node": "^5.0.0",
-    "winston": "^3.2.1"
+    "winston": "^3.3.3"
   }
 }
