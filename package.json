@@ -21,7 +21,7 @@
     "@types/opener": "^1.4.0",
     "@types/shell-quote": "^1.7.0",
     "atob": "^2.1.2",
-    "auth0": "2.27.1",
+    "auth0": "2.35.0",
     "axios": "0.19.2",
     "base64url": "^3.0.1",
     "btoa": "^1.2.1",
